@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IPriceOracle.sol";
 
-contract VirtualAMM is Ownable(msg.sender) {
+contract VirtualAMM is Ownable {
     uint vETHreserve;
     uint vUSDTreserve;
     address positionManager;
@@ -21,7 +21,7 @@ contract VirtualAMM is Ownable(msg.sender) {
         positionManager = _positionManager;
     }
 
-    constructor(uint _vETHreserve, uint _vUSDTreserve, address _IPriceOracle) {
+    constructor(uint _vETHreserve, uint _vUSDTreserve, address _IPriceOracle) Ownable(msg.sender) {
         vUSDTreserve = _vUSDTreserve;
         vETHreserve = _vETHreserve;
         iPriceOracle = IPriceOracle(_IPriceOracle);
@@ -55,6 +55,25 @@ contract VirtualAMM is Ownable(msg.sender) {
 
         vETHreserve = vETH;
         vUSDTreserve = vUSDT;
+    }
+
+    function calculateFundingRate() external view _onlyPositionManager returns (int256 fundingRateBps) {
+        uint256 spotPrice = uint256(iPriceOracle.getLatestPrice());
+
+        (uint256 vAMMPrice, bool isValid) = getCurrentPrice();
+        if (!isValid || spotPrice == 0) {
+            return 0;
+        }
+
+        int256 rawFundingRate = int256(vAMMPrice * 10000 / spotPrice) - 10000;
+
+        if (rawFundingRate > 500) {
+            fundingRateBps = 500;
+        } else if (rawFundingRate < -500) {
+            fundingRateBps = -500;
+        } else {
+            fundingRateBps = rawFundingRate;
+        }
     }
 
     function sqrt(uint x) internal pure returns (uint y) {
