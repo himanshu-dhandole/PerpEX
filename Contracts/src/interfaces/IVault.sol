@@ -18,7 +18,7 @@ interface IVault {
 
     function unlockCollateral(address _user, uint _amount) external;
 
-    function transferCollateral(address _from, address _to, uint _amount) external;
+    function transferCollateral(address _to, uint _amount) external;
 
     function getUserColletral() external view returns (Userdata memory);
 

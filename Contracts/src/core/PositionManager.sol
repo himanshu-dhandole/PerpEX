@@ -155,4 +155,20 @@ contract PositionManager is Ownable, ReentrancyGuard {
         fundingRateAccumulated += fundingRateBps;
         lastFundingTime = block.timestamp;
     }
+
+    function isLiquidated(address user) public view returns(bool){
+        Position memory pos = positions[user];
+
+        (uint currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
+        require(isValid, "Invalid Price");
+        
+        int pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
+        int256 entryPriceWithFee = (int256(pos.entryPrice) * 95) / 100;
+
+        if((int(currentPrice) + pnl) >= entryPriceWithFee){
+            return false;
+        }
+
+        return true;
+        }
 }

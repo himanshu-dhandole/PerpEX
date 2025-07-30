@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 interface IPositionNFT {
-
+    
     // Struct to store position details
     struct PositionMetadata {
         uint256 tokenId;
@@ -20,7 +20,7 @@ interface IPositionNFT {
     function updatePosition(uint256 tokenId, uint256 newSize, uint256 newCollateral) external;
 
     // View functions
-    function getPosition(uint256 tokenId) external view returns (PositionMetadata memory);
+    function getPosition(uint256 tokenId) external view returns (uint256, uint256, uint8, uint256, uint256, int, bool, string memory);
     function getUserPositions(address user) external view returns (uint256[] memory);
     function ownerOf(uint256 tokenId) external view returns (address);
 }
