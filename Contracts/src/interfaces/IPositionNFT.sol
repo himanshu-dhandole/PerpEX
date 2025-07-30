@@ -15,7 +15,7 @@ interface IPositionNFT {
     }
 
     // External functions
-    function mintPosition(address to, uint256 collateral, uint8 leverage, uint256 entryPrice, bool isLong) external returns (uint256);
+    function mintPosition(address to, uint256 collateral, uint8 leverage, uint256 entryPrice,int entryFundingRate, bool isLong) external returns (uint256);
     function burnPosition(uint256 tokenId) external;
     function updatePosition(uint256 tokenId, uint256 newSize, uint256 newCollateral) external;
 

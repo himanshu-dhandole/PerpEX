@@ -13,6 +13,7 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
         uint8 leverage;
         uint256 collateral;
         uint256 entryPrice;
+        int  entryFundingRate ;
         uint256 entryTimestamp;
         bool isLong;
         string symbol;
@@ -57,7 +58,7 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
     }
 
     // Mint a new position NFT
-    function mintPosition(address to, uint256 collateral, uint8 leverage, uint256 entryPrice, bool isLong) external onlyPositionManager nonReentrant returns (uint256) {
+    function mintPosition(address to, uint256 collateral, uint8 leverage, uint256 entryPrice,int entryFundingRate, bool isLong) external onlyPositionManager nonReentrant returns (uint256) {
         require(to != address(0), "Invalid user address");
         require(leverage > 0, "leverage must be > 0");
         require(collateral > 0, "Collateral must be > 0");
@@ -69,6 +70,7 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
             tokenId: tokenId,
             leverage: leverage,
             collateral: collateral,
+            entryFundingRate: entryFundingRate,
             entryPrice: entryPrice,
             entryTimestamp: block.timestamp,
             isLong: isLong,

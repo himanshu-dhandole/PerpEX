@@ -24,7 +24,7 @@ contract Vault is Ownable(msg.sender) {
     event withdrawn (address indexed _user , uint _amount) ;
     event locked (address indexed _user , uint _amount) ;
     event unlocked (address indexed _user , uint _amount) ;
-    event transferedCollateral(address indexed _from , address indexed _to , uint _amount) ;
+    event transferedCollateral(address indexed _to , uint _amount) ;
 
     constructor(address _vUSDTaddress) {
         vUSDT = IERC20(_vUSDTaddress);
@@ -79,13 +79,14 @@ contract Vault is Ownable(msg.sender) {
         emit unlocked(_user, _amount);
     }
 
-    function transferCollateral (address _from , address _to , uint _amount) external _onlyPositionManager {
+    function transferCollateral (address _to , uint _amount) external _onlyPositionManager {
         require(_amount > 0, "cannot transfer ZERO");
-        require(userdata[_from].locked >= _amount , "not enough locked funds");
-        userdata[_from].locked -= _amount ;
+        require(userdata[address(this)].locked >= _amount , "not enough locked funds");
+        userdata[address(this)].locked -= _amount ;
         userdata[_to].available += _amount ;
         totalLocked -= _amount ;
-        emit transferedCollateral(_from, _to, _amount);
+        utilizataonRate = (totalLocked * 10000 ) / totalDeposited ;
+        emit transferedCollateral(_to, _amount);
     }
 
     function getUserColletral  () external view returns (Userdata memory) {
