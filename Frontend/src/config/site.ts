@@ -5,20 +5,8 @@ export const siteConfig = {
   description: "Make beautiful websites regardless of your design experience.",
   navItems: [
     {
-      label: "Home",
-      href: "/",
-    },
-    {
       label: "Docs",
       href: "/docs",
-    },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
-    {
-      label: "Blog",
-      href: "/blog",
     },
     {
       label: "About",
@@ -60,10 +48,10 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/frontio-ai/heroui",
-    twitter: "https://twitter.com/hero_ui",
-    docs: "https://heroui.com",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
+    github: "https://github.com/himanshu-dhandole/PerpEX",
+    twitter: "https://www.linkedin.com/in/himanshu-dhandole",
+    docs: "https://www.linkedin.com/in/himanshu-dhandole",
+    linkedin: "https://www.linkedin.com/in/himanshu-dhandole",
+    sponsor: "https://www.linkedin.com/in/himanshu-dhandole",
   },
 };

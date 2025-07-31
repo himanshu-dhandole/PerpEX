@@ -1,51 +1,39 @@
 import { Button } from "@heroui/button";
-import { Kbd } from "@heroui/kbd";
 import { Link } from "@heroui/link";
-import { Input } from "@heroui/input";
 import {
   Navbar as HeroUINavbar,
   NavbarBrand,
   NavbarContent,
   NavbarItem,
   NavbarMenuToggle,
-  NavbarMenu,
-  NavbarMenuItem,
 } from "@heroui/navbar";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  DropdownSection,
+} from "@heroui/dropdown";
 import { link as linkStyles } from "@heroui/theme";
 import clsx from "clsx";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
-import {
-  TwitterIcon,
-  GithubIcon,
-  DiscordIcon,
-  HeartFilledIcon,
-  SearchIcon,
-} from "@/components/icons";
-import { Logo } from "@/components/icons";
+import { TwitterIcon, GithubIcon, LinkedInIcon, Logo } from "@/components/icons";
+// Import the logo image from assets
+import logo1 from "@/assets/logo1.png";
 
 export const Navbar = () => {
-  const searchInput = (
-    <Input
-      aria-label="Search"
-      classNames={{
-        inputWrapper: "bg-default-100",
-        input: "text-sm",
-      }}
-      endContent={
-        <Kbd className="hidden lg:inline-block" keys={["command"]}>
-          K
-        </Kbd>
-      }
-      labelPlacement="outside"
-      placeholder="Search..."
-      startContent={
-        <SearchIcon className="text-base text-default-400 pointer-events-none flex-shrink-0" />
-      }
-      type="search"
-    />
-  );
+  const { connect, connectors } = useConnect();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+
+  // Format address to be more readable (0x1234...5678)
+  const formatAddress = (address: string) => {
+    if (!address) return "";
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   return (
     <HeroUINavbar maxWidth="xl" position="sticky">
@@ -56,8 +44,8 @@ export const Navbar = () => {
             color="foreground"
             href="/"
           >
-            <Logo />
-            <p className="font-bold text-inherit">ACME</p>
+            <img src={logo1} width={36} alt="PerpEX Logo" />
+            <p className="font-bold text-inherit">PerpEX</p>
           </Link>
         </NavbarBrand>
         <div className="hidden lg:flex gap-4 justify-start ml-2">
@@ -66,7 +54,7 @@ export const Navbar = () => {
               <Link
                 className={clsx(
                   linkStyles({ color: "foreground" }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium",
+                  "data-[active=true]:text-primary data-[active=true]:font-medium"
                 )}
                 color="foreground"
                 href={item.href}
@@ -86,26 +74,61 @@ export const Navbar = () => {
           <Link isExternal href={siteConfig.links.twitter} title="Twitter">
             <TwitterIcon className="text-default-500" />
           </Link>
-          <Link isExternal href={siteConfig.links.discord} title="Discord">
-            <DiscordIcon className="text-default-500" />
+          <Link isExternal href={siteConfig.links.linkedin} title="Discord">
+            <LinkedInIcon className="text-default-500" />
           </Link>
           <Link isExternal href={siteConfig.links.github} title="GitHub">
             <GithubIcon className="text-default-500" />
           </Link>
           <ThemeSwitch />
         </NavbarItem>
-        <NavbarItem className="hidden lg:flex">{searchInput}</NavbarItem>
+
         <NavbarItem className="hidden md:flex">
-          <Button
-            isExternal
-            as={Link}
-            className="text-sm font-normal text-default-600 bg-default-100"
-            href={siteConfig.links.sponsor}
-            startContent={<HeartFilledIcon className="text-danger" />}
-            variant="flat"
-          >
-            Sponsor
-          </Button>
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                className="text-sm font-normal bg-default-100"
+                variant="flat"
+                color={isConnected ? "success" : "default"}
+              >
+                {isConnected ? formatAddress(address!) : "Connect Wallet"}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu aria-label="Wallet options">
+              {isConnected ? (
+                <DropdownSection title="Wallet">
+                  <DropdownItem
+                    key="full-address"
+                    description="Click to copy"
+                    onClick={() => {
+                      navigator.clipboard.writeText(address!);
+                    }}
+                  >
+                    {address}
+                  </DropdownItem>
+                  <DropdownItem
+                    key="disconnect"
+                    className="text-danger"
+                    color="danger"
+                    onClick={() => disconnect()}
+                  >
+                    Disconnect
+                  </DropdownItem>
+                </DropdownSection>
+              ) : (
+                <DropdownSection title="Connect with">
+                  {connectors.map((connector) => (
+                    <DropdownItem
+                      key={connector.id}
+                      onClick={() => connect({ connector })}
+                    >
+                      {connector.name}
+                    </DropdownItem>
+                  ))}
+                </DropdownSection>
+              )}
+            </DropdownMenu>
+          </Dropdown>
         </NavbarItem>
       </NavbarContent>
 
@@ -116,29 +139,6 @@ export const Navbar = () => {
         <ThemeSwitch />
         <NavbarMenuToggle />
       </NavbarContent>
-
-      <NavbarMenu>
-        {searchInput}
-        <div className="mx-4 mt-2 flex flex-col gap-2">
-          {siteConfig.navMenuItems.map((item, index) => (
-            <NavbarMenuItem key={`${item}-${index}`}>
-              <Link
-                color={
-                  index === 2
-                    ? "primary"
-                    : index === siteConfig.navMenuItems.length - 1
-                      ? "danger"
-                      : "foreground"
-                }
-                href="#"
-                size="lg"
-              >
-                {item.label}
-              </Link>
-            </NavbarMenuItem>
-          ))}
-        </div>
-      </NavbarMenu>
     </HeroUINavbar>
   );
 };
