@@ -16,6 +16,7 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
         int256 entryFundingRate;
         uint256 entryTimestamp;
         bool isLong;
+        bool isOpen;
         string symbol;
     }
 
@@ -58,10 +59,18 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
     }
 
     // Mint a new position NFT
-    function mintPosition(address to, uint256 collateral, uint8 leverage, uint256 entryPrice, int256 entryFundingRate, bool isLong) external onlyPositionManager nonReentrant returns (uint256) {
+    function mintPosition(
+        address to, 
+        uint256 collateral, 
+        uint8 leverage, 
+        uint256 entryPrice, 
+        int256 entryFundingRate, 
+        bool isLong
+    ) external onlyPositionManager nonReentrant returns (uint256) {
         require(to != address(0), "Invalid user address");
-        require(leverage > 0, "leverage must be > 0");
+        require(leverage > 0 && leverage <= 50, "Invalid leverage range");
         require(collateral > 0, "Collateral must be > 0");
+        require(entryPrice > 0, "Entry price must be > 0");
 
         uint256 tokenId = _tokenIdCounter++;
         _safeMint(to, tokenId);
@@ -74,6 +83,7 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
             entryFundingRate: entryFundingRate,
             entryTimestamp: block.timestamp,
             isLong: isLong,
+            isOpen: true,
             symbol: isLong ? "vETH-LONG" : "vETH-SHORT"
         });
 
@@ -91,10 +101,11 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
         delete positionMetadata[tokenId];
         _burn(tokenId);
 
-        // Remove token from user's list
+        // Remove token from user's list - fixed array management
         uint256[] storage tokens = _userTokens[owner];
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i] == tokenId) {
+                // Move last element to current position and remove last element
                 tokens[i] = tokens[tokens.length - 1];
                 tokens.pop();
                 break;
@@ -107,6 +118,8 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
     // Update size and collateral of an existing position
     function updatePosition(uint256 tokenId, uint8 newLeverage, uint256 newCollateral) external onlyPositionManager {
         require(_ownerOf(tokenId) != address(0), "Position does not exist");
+        require(newLeverage > 0 && newLeverage <= 50, "Invalid leverage range");
+        require(newCollateral > 0, "Collateral must be > 0");
 
         PositionMetadata storage pos = positionMetadata[tokenId];
         pos.leverage = newLeverage;
@@ -115,16 +128,78 @@ contract PositionNFT is ERC721, Ownable, ReentrancyGuard {
         emit PositionUpdated(tokenId, newLeverage, newCollateral);
     }
 
+    // Close a position (mark as closed without burning)
+    function closePosition(uint256 tokenId) external onlyPositionManager {
+        require(_ownerOf(tokenId) != address(0), "Position does not exist");
+        
+        PositionMetadata storage pos = positionMetadata[tokenId];
+        require(pos.isOpen, "Position already closed");
+        pos.isOpen = false;
+    }
+
     // View details of a specific position
-    function getPosition(uint256 tokenId) external view returns (uint256, uint256, uint8, uint256, uint256, int256, bool, string memory) {
+    function getPosition(uint256 tokenId) external view returns (
+        uint256, 
+        uint256, 
+        uint8, 
+        uint256, 
+        uint256, 
+        int256, 
+        bool, 
+        bool, 
+        string memory
+    ) {
         require(_ownerOf(tokenId) != address(0), "Position does not exist");
         PositionMetadata memory pos = positionMetadata[tokenId];
-        return (pos.tokenId, pos.collateral, pos.leverage, pos.entryPrice, pos.entryTimestamp, pos.entryFundingRate, pos.isLong, pos.symbol);
+        return (
+            pos.tokenId, 
+            pos.collateral, 
+            pos.leverage, 
+            pos.entryPrice, 
+            pos.entryTimestamp, 
+            pos.entryFundingRate, 
+            pos.isLong, 
+            pos.isOpen, 
+            pos.symbol
+        );
     }
 
     // Get list of position token IDs owned by a user
     function getUserPositions(address user) external view returns (uint256[] memory) {
         return _userTokens[user];
+    }
+
+    // Get list of open position token IDs owned by a user
+    function getUserOpenPositions(address user) external view returns (uint256[] memory) {
+        uint256[] memory userTokens = _userTokens[user];
+        uint256 openCount = 0;
+        
+        // Count open positions
+        for (uint256 i = 0; i < userTokens.length; i++) {
+            if (positionMetadata[userTokens[i]].isOpen) {
+                openCount++;
+            }
+        }
+        
+        // Create array of open positions
+        uint256[] memory openPositions = new uint256[](openCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < userTokens.length; i++) {
+            if (positionMetadata[userTokens[i]].isOpen) {
+                openPositions[index] = userTokens[i];
+                index++;
+            }
+        }
+        
+        return openPositions;
+    }
+
+    // Check if a position exists and is open
+    function isPositionOpen(uint256 tokenId) external view returns (bool) {
+        if (_ownerOf(tokenId) == address(0)) {
+            return false;
+        }
+        return positionMetadata[tokenId].isOpen;
     }
 
     // Set base URI for token metadata

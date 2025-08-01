@@ -2,29 +2,23 @@
 pragma solidity ^0.8.19;
 
 interface IVault {
-    struct Userdata {
-        uint deposited;
-        uint locked;
-        uint available;
-    }
+    // User functions
+    function deposit(uint256 _amount) external;
+    function withdrawal(uint256 _amount) external;
+    function getUserCollateral() external view returns (
+        uint256 deposited,
+        uint256 locked,
+        uint256 available
+    );
+    function getUtilizationRate() external view returns (uint256);
+    function getTotalLiquidity() external view returns (uint256);
 
+    // Manager-only functions
+    function lockCollateral(address _user, uint256 _amount) external;
+    function unlockCollateral(address _user, uint256 _amount) external;
+    function transferCollateral(address _to, uint256 _amount) external;
+    function absorbLiquidatedCollateral(address _user, uint256 _amount) external;
+
+    // Admin
     function setPositionManager(address _positionManager) external;
-
-    function deposit(uint _amount) external;
-
-    function withdrawl(uint _amount) external;
-
-    function lockCollateral(address _user, uint _amount) external;
-
-    function unlockCollateral(address _user, uint _amount) external;
-
-    function transferCollateral(address _to, uint _amount) external;
-
-    function getUserColletral() external view returns (Userdata memory);
-
-    function getUtilizationRate() external view returns (uint);
-
-    function getTotalLiqudity() external view returns (uint);
-
-    function absorbLiquidatedCollateral(address _user, uint _amount) external;
 }

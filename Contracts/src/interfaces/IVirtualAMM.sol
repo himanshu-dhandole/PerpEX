@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 interface IVirtualAMM {
-    function getCurrentPrice() external view returns (uint256, bool);
+    function updateReserve(uint256 _amount, bool _isLong) external;
+
     function calculateFundingRate() external view returns (int256);
-    function updateReserve(uint256 amount, bool isLong) external;
-    function setPositionManager(address positionManager) external;
-    function setInitialPrice() external;
+
+    function getCurrentPrice() external view returns (uint256, bool);
 }
