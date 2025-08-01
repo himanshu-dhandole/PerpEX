@@ -10,168 +10,280 @@ import "../interfaces/IVirtualAMM.sol";
 import "../interfaces/IVault.sol";
 
 contract PositionManager is Ownable, ReentrancyGuard {
-    struct Position {
-        address user;
-        uint256 collateral;
-        uint256 entryPrice;
-        int entryFundingRate ;
-        uint256 exitPrice;
-        uint8 leverage;
-        bool isLong;
-        bool isOpen;
-    }
+    // Constants
+    uint256 public constant MAX_LEVERAGE = 50;
+    uint256 public constant TRADING_FEES_BPS = 500; // 5%
+    uint256 public constant LIQUIDATION_THRESHOLD_BPS = 500; // 5%
+    uint256 public constant FUNDING_INTERVAL = 8 hours;
 
-    mapping(address => Position) positions;
+    // State
+    uint256 public totalLong;
+    uint256 public totalShort;
+    uint256 public totalLongCollateral;
+    uint256 public totalShortCollateral;
+    uint256 public lastFundingTime;
+    int256 public fundingRateAccumulated;
+    bool public emergencyPause;
 
-    uint constant MAX_LEVERAGE = 50;
-    uint constant TRADING_FEES = 500;
-    uint public totalLong;
-    uint public totalShort;
-    uint public totalLongColletral;
-    uint public totalShortColleteral;
-    uint public lastFundingTime;
-    int public fundingRateAccumulated;
-
-
+    // Interfaces
     IPriceOracle public priceOracle;
     IPositionNFT public positionNFT;
     IVirtualAMM public virtualAMM;
     IVault public vault;
 
+    // Structs
+    struct PositionData {
+        uint256 collateral;
+        uint8 leverage;
+        uint256 entryPrice;
+        int256 entryFundingRate;
+        bool isLong;
+    }
+
+    // Events
+    event PositionOpened(uint256 indexed tokenId, address indexed user, uint256 collateral, uint8 leverage, uint256 entryPrice, bool isLong);
+    event PositionClosed(uint256 indexed tokenId, address indexed user, int256 pnl, int256 fundingPayment, uint256 fees);
+    event PositionLiquidated(uint256 indexed tokenId, address indexed user, address indexed liquidator, uint256 liquidationReward);
+    event FundingRateUpdated(int256 newRate, int256 accumulated);
+    event EmergencyPauseToggled(bool paused);
+
+    // Errors
+    error ContractPaused();
+    error InsufficientCollateral();
+    error InvalidLeverage();
+    error InsufficientFunds();
+    error PositionNotFound();
+    error NotPositionOwner();
+    error PositionNotLiquidatable();
+    error FundingTooEarly();
+
+    modifier whenNotPaused() {
+        if (emergencyPause) revert ContractPaused();
+        _;
+    }
+
     constructor(
-        address _IPriceOracle,
-        address _IPositionNFT,
-        address _IVirtualAMM,
-        address _IVault
+        address _priceOracle,
+        address _positionNFT,
+        address _virtualAMM,
+        address _vault
     ) Ownable(msg.sender) {
-        priceOracle = IPriceOracle(_IPriceOracle);
-        positionNFT = IPositionNFT(_IPositionNFT);
-        virtualAMM = IVirtualAMM(_IVirtualAMM);
-        vault = IVault(_IVault);
-    }
-
-    function openPosition(
-        uint _colleteral,
-        uint _leverage,
-        bool _isLong
-    ) public nonReentrant {
-        require(_colleteral > 0, "cannot be ZERO");
-        require(_leverage <= MAX_LEVERAGE, "Leaverage too high");
-        uint fees = ((_colleteral * _leverage) / TRADING_FEES) / 10000;
-        require(_colleteral > fees, "Insuffecient funds");
-        uint netColleteral = _colleteral - fees;
-
-        vault.lockCollateral(msg.sender, _colleteral);
-        virtualAMM.updateReserve(netColleteral * _leverage, _isLong);
-
-        uint _entryPrice = uint(priceOracle.getLatestPrice());
-        int entryFundingRate = virtualAMM.calculateFundingRate() ;
-
-        positions[msg.sender] = Position({
-            user: msg.sender,
-            collateral: netColleteral,
-            entryPrice: _entryPrice,
-            entryFundingRate : entryFundingRate ,
-            exitPrice: 0,
-            leverage: uint8(_leverage),
-            isLong: _isLong,
-            isOpen: true 
-        });
-
-        if (_isLong) {
-            totalLong += netColleteral * _leverage;
-            totalLongColletral += netColleteral;
-        } else {
-            totalShort += netColleteral * _leverage;
-            totalShortColleteral += netColleteral;
-        }
-
-        positionNFT.mintPosition(msg.sender, netColleteral, uint8(_leverage), _entryPrice, entryFundingRate, _isLong);
-    }
-
-    function closePosition(uint256 tokenId) external nonReentrant {
-        require(positionNFT.ownerOf(tokenId) == msg.sender, "Not position owner");
-
-        (   ,
-            uint256 collateral,
-            uint8 leverage,
-            uint256 entryPrice,,
-            int entryFundingRate,
-            bool isLong,) = positionNFT.getPosition(tokenId);
-
-
-        (uint currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
-        require(isValid, "Invalid price");
-
-        int finalPnl = _calculatePnl(isLong, leverage, collateral, entryPrice, currentPrice);
-        int fundingReward = _calculateFundingReward(isLong, finalPnl, collateral, entryFundingRate);
-
-        uint256 fees = ((collateral * leverage) * TRADING_FEES) / 1e6;
-        int settledAmount = int(collateral) + finalPnl + fundingReward - int(fees);
-
-        positionNFT.burnPosition(tokenId);
-        delete positions[msg.sender];
-
-        // Handle liquidation
-        if (isLiquidated(msg.sender)) {
-            vault.absorbLiquidatedCollateral(msg.sender, collateral);
-            return;
-        }
-
-        vault.unlockCollateral(msg.sender, collateral);
-
-        if (settledAmount > 0) {
-            vault.transferCollateral(msg.sender, uint(settledAmount));
-        }
-        
-    }
-
-    function _calculatePnl(bool isLong, uint8 leverage, uint256 collateral, uint256 entryPrice, uint256 currentPrice) internal pure returns (int) {
-        int priceChangePercentage;
-
-        if (isLong) {
-            priceChangePercentage = (int(currentPrice) * 1e18) / int(entryPrice) - 1e18;
-        } else {
-            priceChangePercentage = 1e18 - (int(currentPrice) * 1e18) / int(entryPrice);
-        }
-
-        int pnlPercent = (priceChangePercentage * int8(leverage)) / 1e18;
-        return int(collateral) * pnlPercent / 1e18;
-    }
-
-    function _calculateFundingReward(bool isLong, int finalPnl, uint256 collateral, int entryFundingRate) internal view returns (int) {
-        int settledAmount = int(collateral) + finalPnl;
-        int fundingDelta = fundingRateAccumulated - entryFundingRate;
-        int fundingReward = (settledAmount * fundingDelta) / 10000;
-
-        if ((isLong && fundingDelta < 0) || (!isLong && fundingDelta > 0)) {
-            return -fundingReward; // pay
-        } else {
-            return fundingReward; // receive
-        }
-    }
-
-
-    function updateFundingRate() external onlyOwner(){
-        require(block.timestamp >= lastFundingTime + 8 hours, "Funding rate can only be updated every 8 hours");
-        int fundingRateBps = virtualAMM.calculateFundingRate();
-        fundingRateAccumulated += fundingRateBps;
+        priceOracle = IPriceOracle(_priceOracle);
+        positionNFT = IPositionNFT(_positionNFT);
+        virtualAMM = IVirtualAMM(_virtualAMM);
+        vault = IVault(_vault);
         lastFundingTime = block.timestamp;
     }
 
-    function isLiquidated(address user) public view returns(bool){
-        Position memory pos = positions[user];
+    function openPosition(
+        uint256 collateral,
+        uint8 leverage,
+        bool isLong
+    ) external nonReentrant whenNotPaused {
+        if (collateral == 0) revert InsufficientCollateral();
+        if (leverage == 0 || leverage > MAX_LEVERAGE) revert InvalidLeverage();
 
-        (uint currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
-        require(isValid, "Invalid Price");
-        
-        int pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
-        int256 entryPriceWithFee = (int256(pos.entryPrice) * 95) / 100;
+        uint256 notionalSize = collateral * leverage;
+        uint256 fees = (notionalSize * TRADING_FEES_BPS) / 10000;
+        if (collateral <= fees) revert InsufficientFunds();
+        uint256 netCollateral = collateral - fees;
 
-        if((int(currentPrice) + pnl) >= entryPriceWithFee){
-            return false;
+        vault.lockCollateral(msg.sender, collateral);
+        virtualAMM.updateReserve(notionalSize, isLong);
+
+        uint256 entryPrice = uint256(priceOracle.getLatestPrice());
+        int256 entryFundingRate = virtualAMM.calculateFundingRate();
+
+        if (isLong) {
+            totalLong += notionalSize;
+            totalLongCollateral += netCollateral;
+        } else {
+            totalShort += notionalSize;
+            totalShortCollateral += netCollateral;
         }
 
-        return true;
+        uint256 tokenId = positionNFT.mintPosition(
+            msg.sender,
+            netCollateral,
+            leverage,
+            entryPrice,
+            entryFundingRate,
+            isLong
+        );
+
+        emit PositionOpened(tokenId, msg.sender, netCollateral, leverage, entryPrice, isLong);
+    }
+
+    function closePosition(uint256 tokenId) external nonReentrant whenNotPaused {
+        (PositionData memory pos, address owner, bool isOpen) = _getPositionData(tokenId);
+        if (owner != msg.sender) revert NotPositionOwner();
+        if (!isOpen) revert PositionNotFound();
+
+        (uint256 currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
+        require(isValid, "Invalid price");
+
+        uint256 notionalSize = pos.collateral * pos.leverage;
+        uint256 fees = (notionalSize * TRADING_FEES_BPS) / 10000;
+
+        int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
+        int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);
+        int256 settlementAmount = int256(pos.collateral) + pnl - fundingPayment - int256(fees);
+
+        if (pos.isLong) {
+            totalLong -= notionalSize;
+            totalLongCollateral -= pos.collateral;
+        } else {
+            totalShort -= notionalSize;
+            totalShortCollateral -= pos.collateral;
         }
+
+        positionNFT.burnPosition(tokenId);
+
+        if (settlementAmount > 0) {
+            vault.unlockCollateral(msg.sender, uint256(settlementAmount));
+        } else {
+            vault.absorbLiquidatedCollateral(msg.sender, pos.collateral);
+        }
+
+        emit PositionClosed(tokenId, msg.sender, pnl, fundingPayment, fees);
+    }
+
+    function liquidatePosition(uint256 tokenId) external nonReentrant whenNotPaused {
+        (PositionData memory pos, address owner, bool isOpen) = _getPositionData(tokenId);
+        if (owner == address(0) || !isOpen) revert PositionNotFound();
+
+        if (!_isLiquidatable(pos.collateral, pos.leverage, pos.entryPrice, pos.entryFundingRate, pos.isLong)) {
+            revert PositionNotLiquidatable();
+        }
+
+        (uint256 currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
+        require(isValid, "Invalid price");
+
+        int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
+        int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);
+        uint256 liquidationReward = (pos.collateral * 200) / 10000;
+        int256 remainingValue = int256(pos.collateral) + pnl - fundingPayment - int256(liquidationReward);
+
+        uint256 notionalSize = pos.collateral * pos.leverage;
+        if (pos.isLong) {
+            totalLong -= notionalSize;
+            totalLongCollateral -= pos.collateral;
+        } else {
+            totalShort -= notionalSize;
+            totalShortCollateral -= pos.collateral;
+        }
+
+        positionNFT.burnPosition(tokenId);
+
+        if (liquidationReward > 0) {
+            vault.transferCollateral(msg.sender, liquidationReward);
+        }
+
+        if (remainingValue > 0) {
+            vault.unlockCollateral(owner, uint256(remainingValue));
+        }
+
+        vault.absorbLiquidatedCollateral(owner, pos.collateral);
+
+        emit PositionLiquidated(tokenId, owner, msg.sender, liquidationReward);
+    }
+
+    function updateFundingRate() external onlyOwner {
+        if (block.timestamp < lastFundingTime + FUNDING_INTERVAL) revert FundingTooEarly();
+
+        int256 fundingRateBps = virtualAMM.calculateFundingRate();
+        fundingRateAccumulated += fundingRateBps;
+        lastFundingTime = block.timestamp;
+
+        emit FundingRateUpdated(fundingRateBps, fundingRateAccumulated);
+    }
+
+    function isPositionLiquidatable(uint256 tokenId) external view returns (bool) {
+        (PositionData memory pos, , bool isOpen) = _getPositionData(tokenId);
+        if (!isOpen) return false;
+        return _isLiquidatable(pos.collateral, pos.leverage, pos.entryPrice, pos.entryFundingRate, pos.isLong);
+    }
+
+    function _getPositionData(uint256 tokenId) internal view returns (PositionData memory position, address owner, bool isOpen) {
+        owner = positionNFT.ownerOf(tokenId);
+        (
+            ,
+            uint256 collateral,
+            uint8 leverage,
+            uint256 entryPrice,
+            ,
+            int256 entryFundingRate,
+            bool isLong,
+            bool open,
+
+        ) = positionNFT.getPosition(tokenId);
+
+        position = PositionData(collateral, leverage, entryPrice, entryFundingRate, isLong);
+        isOpen = open;
+    }
+
+    function _calculatePnl(
+        bool isLong,
+        uint8 leverage,
+        uint256 collateral,
+        uint256 entryPrice,
+        uint256 currentPrice
+    ) internal pure returns (int256) {
+        int256 priceChangePercentage;
+
+        if (isLong) {
+            priceChangePercentage = (int256(currentPrice) * 1e18) / int256(entryPrice) - 1e18;
+        } else {
+            priceChangePercentage = 1e18 - (int256(currentPrice) * 1e18) / int256(entryPrice);
+        }
+
+        int256 pnlPercent = (priceChangePercentage * int256(uint256(leverage))) / 1e18;
+        return (int256(collateral) * pnlPercent) / 1e18;
+    }
+
+    function _calculateFundingPayment(
+        bool isLong,
+        uint256 collateral,
+        int256 entryFundingRate
+    ) internal view returns (int256) {
+        int256 fundingDelta = fundingRateAccumulated - entryFundingRate;
+        int256 fundingPayment = (int256(collateral) * fundingDelta) / 10000;
+
+        return isLong ? fundingPayment : -fundingPayment;
+    }
+
+    function _isLiquidatable(
+        uint256 collateral,
+        uint8 leverage,
+        uint256 entryPrice,
+        int256 entryFundingRate,
+        bool isLong
+    ) internal view returns (bool) {
+        (uint256 currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
+        if (!isValid) return false;
+
+        int256 pnl = _calculatePnl(isLong, leverage, collateral, entryPrice, currentPrice);
+        int256 fundingPayment = _calculateFundingPayment(isLong, collateral, entryFundingRate);
+
+        int256 remainingValue = int256(collateral) + pnl - fundingPayment;
+        int256 maintenanceMargin = int256(collateral * LIQUIDATION_THRESHOLD_BPS) / 10000;
+
+        return remainingValue <= maintenanceMargin;
+    }
+
+    function getPositionStats() external view returns (
+        uint256 _totalLong,
+        uint256 _totalShort,
+        uint256 _totalLongCollateral,
+        uint256 _totalShortCollateral,
+        int256 _fundingRateAccumulated
+    ) {
+        return (
+            totalLong,
+            totalShort,
+            totalLongCollateral,
+            totalShortCollateral,
+            fundingRateAccumulated
+        );
+    }
 }
