@@ -8,8 +8,9 @@ import { config } from "./config/wagmiConfig.ts";
 import IndexPage from "@/pages/index";
 import DocsPage from "@/pages/docs";
 import PricingPage from "@/pages/pricing";
-import BlogPage from "@/pages/blog";
+import Deposit from "@/pages/deposit";
 import AboutPage from "@/pages/about";
+import TradingPlatform from "@/pages/trading";
 
 // Query client instance
 const queryClient = new QueryClient();
@@ -22,8 +23,9 @@ function App() {
                     <Route element={<IndexPage/>} path="/"/>
                     <Route element={<DocsPage/>} path="/docs"/>
                     <Route element={<PricingPage/>} path="/pricing"/>
-                    <Route element={<BlogPage/>} path="/blog"/>
+                    <Route element={<Deposit/>} path="/deposit"/>
                     <Route element={<AboutPage/>} path="/about"/>
+                    <Route element={<TradingPlatform/>} path="/trading"/>
                 </Routes>
             </QueryClientProvider>
         </WagmiProvider>
