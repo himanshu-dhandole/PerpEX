@@ -89,23 +89,19 @@ contract PositionManager is Ownable, ReentrancyGuard {
         positionNFT.mintPosition(msg.sender, netColleteral, uint8(_leverage), _entryPrice, entryFundingRate, _isLong);
     }
 
-    function closePosition(uint256 tokenId, uint256 priceDelta) external {
+    function closePosition(uint256 tokenId) external nonReentrant {
         require(positionNFT.ownerOf(tokenId) == msg.sender, "Not position owner");
-        require(priceDelta >= 0, "Size should be greater than 0");
 
-        // Load position data
-        (
-            ,
+        (   ,
             uint256 collateral,
             uint8 leverage,
             uint256 entryPrice,,
             int entryFundingRate,
             bool isLong,) = positionNFT.getPosition(tokenId);
 
-        require(priceDelta >= collateral, "collateral delta too large");
 
         (uint currentPrice, bool isValid) = virtualAMM.getCurrentPrice();
-        require(isValid, "Invalid Price");
+        require(isValid, "Invalid price");
 
         int finalPnl = _calculatePnl(isLong, leverage, collateral, entryPrice, currentPrice);
         int fundingReward = _calculateFundingReward(isLong, finalPnl, collateral, entryFundingRate);
@@ -115,12 +111,19 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         positionNFT.burnPosition(tokenId);
         delete positions[msg.sender];
-        
-        if ( (finalPnl + fundingReward) > 0) {
-            vault.transferCollateral(msg.sender, uint((finalPnl + fundingReward)));
-        }
-        vault.unlockCollateral(msg.sender, uint(settledAmount));
 
+        // Handle liquidation
+        if (isLiquidated(msg.sender)) {
+            vault.absorbLiquidatedCollateral(msg.sender, collateral);
+            return;
+        }
+
+        vault.unlockCollateral(msg.sender, collateral);
+
+        if (settledAmount > 0) {
+            vault.transferCollateral(msg.sender, uint(settledAmount));
+        }
+        
     }
 
     function _calculatePnl(bool isLong, uint8 leverage, uint256 collateral, uint256 entryPrice, uint256 currentPrice) internal pure returns (int) {

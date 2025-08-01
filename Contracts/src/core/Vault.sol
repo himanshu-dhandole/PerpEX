@@ -62,7 +62,7 @@ contract Vault is Ownable(msg.sender) {
     function lockCollateral(address _user , uint _amount) external _onlyPositionManager{
         require(_amount > 0, "cannot withdraw ZERO");
         require(userdata[_user].available >= _amount , "not enough funds");
-        require((((totalLocked + _amount)*10000) / totalDeposited)>= maxUtilization);
+require((((totalLocked + _amount)*10000) / totalDeposited) <= maxUtilization, "exceeds max utilization");
         userdata[_user].available -= _amount ;
         userdata[_user].locked += _amount ;
         totalLocked += _amount ;
@@ -87,6 +87,18 @@ contract Vault is Ownable(msg.sender) {
         totalLocked -= _amount ;
         utilizataonRate = (totalLocked * 10000 ) / totalDeposited ;
         emit transferedCollateral(_to, _amount);
+    }
+
+    // Called when a user's position is liquidated
+    function absorbLiquidatedCollateral(address _user, uint _amount) external _onlyPositionManager {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(userdata[_user].locked >= _amount, "Insufficient locked balance");
+
+        userdata[_user].locked -= _amount;
+        totalLocked -= _amount;
+
+        utilizataonRate = (totalLocked * 10000) / totalDeposited;
+
     }
 
     function getUserColletral  () external view returns (Userdata memory) {

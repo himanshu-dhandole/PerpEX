@@ -25,4 +25,6 @@ interface IVault {
     function getUtilizationRate() external view returns (uint);
 
     function getTotalLiqudity() external view returns (uint);
+
+    function absorbLiquidatedCollateral(address _user, uint _amount) external;
 }
