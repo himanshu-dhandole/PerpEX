@@ -16,8 +16,10 @@ import VUSDT_ABI from "@/abis/vusdt.json";
 import VAULT_ABI from "@/abis/vault.json";
 import DefaultLayout from "@/layouts/default";
 
-const VUSDT_ADDRESS = "0x03c9B33a9917FfB6d1a55E9d2a651FaE26771C29";
-const VAULT_ADDRESS = "0x029FBD1d07d90656543421B5E317e6320fe8A18c";
+
+const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
+const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
+
 
 export default function VaultPage() {
   const { address } = useAccount();
