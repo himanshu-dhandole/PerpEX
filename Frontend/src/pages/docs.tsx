@@ -9,10 +9,17 @@ import { formatUnits } from "viem";
 
 import VUSDT_ABI from "@/abis/vusdt.json";
 import VAULT_ABI from "@/abis/vault.json";
+import PRICE_ORACLE_ABI from "@/abis/priceOracle.json";
+import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
+import POSITION_NFT_ABI from "@/abis/positionNFT.json";
 
 export default function DocsPage() {
-  const VUSDT_ADDRESS = "0x03c9B33a9917FfB6d1a55E9d2a651FaE26771C29";
-  const VAULT_ADDRESS = "0x029FBD1d07d90656543421B5E317e6320fe8A18c";
+  const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
+  const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
+  const PRICE_ORACLE_ADDRESS = import.meta.env.VITE_PRICE_ORACLE_ADDRESS;
+  const POSITION_MANAGER_ADDRESS = import.meta.env.VITE_POSITION_MANAGER_ADDRESS;
+  const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS;
+  const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS;
 
   const { address } = useAccount();
 
@@ -23,6 +30,8 @@ export default function DocsPage() {
     locked: "0.00",
     available: "0.00",
   });
+  const [price, setPrice] = useState(0);
+  const [tokennID , setTokenID] = useState("");
 
   const loadBalance = async () => {
     if (!address) return;
@@ -43,37 +52,35 @@ export default function DocsPage() {
       alert("Could not load balance.");
     }
   };
-const loadVaultBalances = async () => {
-  if (!address) return;
+  const loadVaultBalances = async () => {
+    if (!address) return;
 
-  try {
-    const publicClient = getPublicClient(config);
+    try {
+      const publicClient = getPublicClient(config);
 
-    const result = await readContract(publicClient, {
-      address: VAULT_ADDRESS,
-      abi: VAULT_ABI,
-      functionName: "getUserCollateral",
-      args: [],
-      account: address,
-    });
+      const result = await readContract(publicClient, {
+        address: VAULT_ADDRESS,
+        abi: VAULT_ABI,
+        functionName: "getUserCollateral",
+        args: [],
+        account: address,
+      });
 
-    console.log("Vault getUserCollateral result:", result);
+      console.log("Vault getUserCollateral result:", result);
 
-    // Destructure if it's an object
-    const { deposited, locked, available } = result;
+      // Destructure if it's an object
+      const { deposited, locked, available } = result;
 
-    setVaultData({
-      deposited: formatUnits(deposited, 18),
-      locked: formatUnits(locked, 18),
-      available: formatUnits(available, 18),
-    });
-
-  } catch (error) {
-    console.error("Failed to fetch vault balances:", error);
-    alert("Could not load vault balances.");
-  }
-};
-
+      setVaultData({
+        deposited: formatUnits(deposited, 18),
+        locked: formatUnits(locked, 18),
+        available: formatUnits(available, 18),
+      });
+    } catch (error) {
+      console.error("Failed to fetch vault balances:", error);
+      alert("Could not load vault balances.");
+    }
+  };
 
   const mintTokens = async () => {
     if (!address) return;
@@ -99,6 +106,103 @@ const loadVaultBalances = async () => {
       setMinting(false);
     }
   };
+
+  const loadCurrentPrice = async () => {
+    if (!address) return;
+
+    try {
+      const publicClient = getPublicClient(config);
+
+      const price = await readContract(publicClient, {
+        address: PRICE_ORACLE_ADDRESS,
+        abi: PRICE_ORACLE_ABI,
+        functionName: "getLatestPrice",
+        args: [],
+      });
+      console.log("Current price:", price);
+
+      const dec = await readContract(publicClient, {
+        address: PRICE_ORACLE_ADDRESS,
+        abi: PRICE_ORACLE_ABI,
+        functionName: "getDecimals",
+        args: [],
+      });
+
+      console.log("Current decimals:", dec);
+
+      setPrice(Number(price) / 1e8);
+    } catch (error) {
+      console.error("Failed to fetch current price:", error);
+      alert("Could not load current price.");
+    }
+  };
+
+  // const closePosition = async () => {
+
+  // }
+
+  const loadPositionData = async () => {
+    if (!address) return;
+    try {
+      const publicClient = getPublicClient(config);
+
+       const tokenId = await readContract(publicClient, {
+        address: POSITION_NFT_ADDRESS,
+        abi: POSITION_NFT_ABI,
+        functionName: "getUserOpenPositions",
+        args: [address],
+      });
+
+      console.log("User's open positions:", tokenId);
+      setTokenID(String(tokenId));
+
+      const positionData = await readContract(publicClient, {
+        address: POSITION_NFT_ADDRESS,
+        abi: POSITION_NFT_ABI,
+        functionName: "getPosition",
+        args: [tokenId],
+      });
+
+      console.log("Position data:", positionData);
+
+    } catch (error) {
+      console.error("Failed to load position data:", error);
+      alert("Could not load position data.");
+    }
+  }
+
+  const openPos = async () => {
+    if (!address) return;
+    try {
+      const walletClient = await getWalletClient(config);
+      await writeContract(walletClient, {
+        address: POSITION_MANAGER_ADDRESS,
+        abi: POSITION_MANAGER_ABI,
+        functionName: "openPosition",
+        args: [100_1e18 , 1, true],
+      });
+    } catch (error) {
+      console.error("Failed to open position:", error);
+      alert("Could not open position.");
+    }
+  };
+
+  const closePosition = async () => {
+    if (!address) return;
+
+    try {
+      const walletClient = await getWalletClient(config);
+      await writeContract(walletClient, {
+        address: POSITION_MANAGER_ADDRESS,
+        abi: POSITION_MANAGER_ABI,
+        functionName: "closePosition",
+        args: [tokennID],
+      });
+    } catch (error) {
+      console.error("Failed to close position:", error);
+      alert("Could not close position.");
+    }
+  }
 
   return (
     <DefaultLayout>
@@ -128,15 +232,49 @@ const loadVaultBalances = async () => {
             Load Vault Balances
           </button>
 
-          <h2 className="mt-4 text-xl font-semibold">Wallet: ${balance.toFixed(2)} vUSDT</h2>
+          <h2 className="mt-4 text-xl font-semibold">
+            Wallet: ${balance.toFixed(2)} vUSDT
+          </h2>
 
           <div className="mt-4 text-left text-sm">
-            <p><strong>Deposited:</strong> {vaultData.deposited} vUSDT</p>
-            <p><strong>Locked:</strong> {vaultData.locked} vUSDT</p>
-            <p><strong>Available:</strong> {vaultData.available} vUSDT</p>
+            <p>
+              <strong>Deposited:</strong> {vaultData.deposited} vUSDT
+            </p>
+            <p>
+              <strong>Locked:</strong> {vaultData.locked} vUSDT
+            </p>
+            <p>
+              <strong>Available:</strong> {vaultData.available} vUSDT
+            </p>
           </div>
         </div>
+
+        <div>Latest price from Price Feed</div>
+        <button
+          onClick={loadCurrentPrice}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Price
+        </button>
+        <p>${price}</p>
       </section>
+
+      <section>
+        <h1>open Position</h1>
+        <button
+          onClick={openPos}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          open Long Pos
+        </button>
+      </section>
+
+      <section>
+        <button onClick={loadPositionData}> Load Position Data</button>
+      </section>
+
+      <hr /><hr />
+      <button onClick={closePosition}>Close Position</button>
     </DefaultLayout>
   );
 }
