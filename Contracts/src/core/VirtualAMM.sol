@@ -35,7 +35,7 @@ contract VirtualAMM is Ownable {
 
     // Sets initial reserves based on Chainlink price and product k
     function setInitialPrice() external onlyOwner {
-        uint256 price = uint256(iPriceOracle.getLatestPrice());
+        uint256 price = uint256(iPriceOracle.getLatestPrice()) * 1e10;
         uint256 k = vETHreserve * vUSDTreserve;
 
         uint256 vETH = sqrt((k * PRECISION) / price);
