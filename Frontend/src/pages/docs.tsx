@@ -12,12 +12,14 @@ import VAULT_ABI from "@/abis/vault.json";
 import PRICE_ORACLE_ABI from "@/abis/priceOracle.json";
 import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
 import POSITION_NFT_ABI from "@/abis/positionNFT.json";
+import VAMM_ABI from "@/abis/vamm.json";
 
 export default function DocsPage() {
   const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
   const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
   const PRICE_ORACLE_ADDRESS = import.meta.env.VITE_PRICE_ORACLE_ADDRESS;
-  const POSITION_MANAGER_ADDRESS = import.meta.env.VITE_POSITION_MANAGER_ADDRESS;
+  const POSITION_MANAGER_ADDRESS = import.meta.env
+    .VITE_POSITION_MANAGER_ADDRESS;
   const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS;
   const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS;
 
@@ -30,8 +32,8 @@ export default function DocsPage() {
     locked: "0.00",
     available: "0.00",
   });
-  const [price, setPrice] = useState(0);
-  const [tokennID , setTokenID] = useState("");
+  const [price, setPrice] = useState();
+  const [tokennID, setTokenID] = useState("");
 
   const loadBalance = async () => {
     if (!address) return;
@@ -69,7 +71,11 @@ export default function DocsPage() {
       console.log("Vault getUserCollateral result:", result);
 
       // Destructure if it's an object
-      const { deposited, locked, available } = result;
+      const { deposited, locked, available } = result as {
+        deposited: bigint;
+        locked: bigint;
+        available: bigint;
+      };
 
       setVaultData({
         deposited: formatUnits(deposited, 18),
@@ -107,46 +113,55 @@ export default function DocsPage() {
     }
   };
 
-  const loadCurrentPrice = async () => {
-    if (!address) return;
+  // const loadCurrentPrice = async () => {
+  //   if (!address) return;
 
+  //   try {
+  //     const publicClient = getPublicClient(config);
+
+  //     const [price , isValid] = await readContract(publicClient, {
+  //       address: VAMM_ADDRESS,
+  //       abi: VAMM_ABI,
+  //       functionName: "getCurrentPrice",
+  //     });
+
+  //     console.log("Current price:", price);
+  //   } catch (error) {
+  //     console.error("Failed to fetch current price:", error);
+  //     alert("Could not load current price.");
+  //   }
+  // };
+
+  const loadCurrentPrice = async () => {
     try {
       const publicClient = getPublicClient(config);
-
-      const price = await readContract(publicClient, {
+      console.log("Fetching current price...");
+      const rawPrice = await readContract(publicClient, {
         address: PRICE_ORACLE_ADDRESS,
         abi: PRICE_ORACLE_ABI,
         functionName: "getLatestPrice",
         args: [],
       });
-      console.log("Current price:", price);
-
-      const dec = await readContract(publicClient, {
+        console.log("Raw price:", rawPrice);
+  
+      const decimals = await readContract(publicClient, {
         address: PRICE_ORACLE_ADDRESS,
         abi: PRICE_ORACLE_ABI,
         functionName: "getDecimals",
         args: [],
       });
-
-      console.log("Current decimals:", dec);
-
-      setPrice(Number(price) / 1e8);
+      console.log("Decimals:", decimals);
     } catch (error) {
       console.error("Failed to fetch current price:", error);
-      alert("Could not load current price.");
     }
   };
-
-  // const closePosition = async () => {
-
-  // }
 
   const loadPositionData = async () => {
     if (!address) return;
     try {
       const publicClient = getPublicClient(config);
 
-       const tokenId = await readContract(publicClient, {
+      const tokenId = await readContract(publicClient, {
         address: POSITION_NFT_ADDRESS,
         abi: POSITION_NFT_ABI,
         functionName: "getUserOpenPositions",
@@ -164,12 +179,11 @@ export default function DocsPage() {
       });
 
       console.log("Position data:", positionData);
-
     } catch (error) {
       console.error("Failed to load position data:", error);
       alert("Could not load position data.");
     }
-  }
+  };
 
   const openPos = async () => {
     if (!address) return;
@@ -179,7 +193,7 @@ export default function DocsPage() {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "openPosition",
-        args: [100_1e18 , 1, true],
+        args: [100 * 1e18, 1, true],
       });
     } catch (error) {
       console.error("Failed to open position:", error);
@@ -202,7 +216,25 @@ export default function DocsPage() {
       console.error("Failed to close position:", error);
       alert("Could not close position.");
     }
-  }
+  };
+
+  const setInitialPrice = async () => {
+    if (!address) return;
+    try {
+      const walletClient = await getWalletClient(config);
+      console.log("Setting initial price...");
+      await writeContract(walletClient, {
+        address: VAMM_ADDRESS,
+        abi: VAMM_ABI,
+        functionName: "setInitialPrice",
+        account: address,
+      });
+
+      console.log("Initial price set successfully");
+    } catch (error) {
+      console.error("Failed to set initial price:", error);
+    }
+  };
 
   return (
     <DefaultLayout>
@@ -273,8 +305,16 @@ export default function DocsPage() {
         <button onClick={loadPositionData}> Load Position Data</button>
       </section>
 
-      <hr /><hr />
+      <hr />
+      <hr />
       <button onClick={closePosition}>Close Position</button>
+
+      <button
+        onClick={setInitialPrice}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Set Initial Price
+      </button>
     </DefaultLayout>
   );
 }
