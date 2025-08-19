@@ -51,6 +51,7 @@ contract DeployPerpex is Script {
         nft.setPositionManager(address(manager));
         vault.setPositionManager(address(manager));
         amm.setPositionManager(address(manager));
+        amm.setInitialPrice();
 
         vm.stopBroadcast();
     }
