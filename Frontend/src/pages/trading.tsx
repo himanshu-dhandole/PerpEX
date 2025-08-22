@@ -1,416 +1,4 @@
-// import React, { useState, useEffect } from "react";
-// import { Card, CardBody, CardHeader } from "@heroui/card";
-// import { Divider } from "@heroui/divider";
-// import { Avatar } from "@heroui/avatar";
-// import { Chip } from "@heroui/chip";
-// import { Progress } from "@heroui/progress";
-// import { Button } from "@heroui/button";
-// import { Input } from "@heroui/input";
-// import { Slider } from "@heroui/slider";
-
-// import DefaultLayout from "@/layouts/default";
-// import { config } from "@/config/wagmiConfig";
-// import { getPublicClient, getWalletClient } from "wagmi/actions";
-// import { readContract, writeContract } from "viem/actions";
-// import { formatUnits, parseUnits } from "viem";
-// import { useAccount } from "wagmi";
-// import { toast, ToastContainer } from 'react-toastify';
-// import 'react-toastify/dist/ReactToastify.css';
-
-// import {
-//   Activity,
-//   Badge,
-//   TrendingUp,
-//   TrendingDown,
-//   Zap,
-//   DollarSign,
-// } from "lucide-react";
-
-// import VAULT_ABI from "@/abis/vault.json";
-// import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
-// import POSITION_NFT_ABI from "@/abis/positionNFT.json";
-// import VAMM_ABI from "@/abis/vamm.json";
-
-// export default function TradingPage() {
-//   const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
-//   const POSITION_MANAGER_ADDRESS = import.meta.env
-//     .VITE_POSITION_MANAGER_ADDRESS;
-//   const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS;
-//   const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS;
-
-//   const { address } = useAccount();
-
-//   const [currentPrice, setCurrentPrice] = useState(0);
-//   const [priceChange, setPriceChange] = useState(0);
-//   const [priceChangePercent, setPriceChangePercent] = useState(0);
-//   const [tokenID, setTokenID] = useState<number | null>(null);
-//   const [fundingRate, setFundingRate] = useState(0);
-//   const [isOpen , setIsOpen] = useState(false);
-
-//   const [vaultData, setVaultData] = useState({
-//     deposited: "0.00",
-//     locked: "0.00",
-//     available: "0.00",
-//   });
-
-//   // Trading states
-//   const [baseAmount, setBaseAmount] = useState(0);
-//   const [leverage, setLeverage] = useState(1);
-//   const [position, setPosition] = useState(null);
-//   const [entryPrice, setEntryPrice] = useState(0);
-//   const [pnl, setPnl] = useState(0);
-
-//   const positionSize = baseAmount * leverage;
-//   const leverageColor =
-//     leverage <= 10 ? "success" : leverage <= 50 ? "warning" : "danger";
-
-//   const loadCurrentPrice = async () => {
-//     try {
-//       const publicClient = getPublicClient(config);
-//       const res = await readContract(publicClient, {
-//         address: VAMM_ADDRESS,
-//         abi: VAMM_ABI,
-//         functionName: "getCurrentPrice",
-//       });
-//       console.log("Current price response:", res);
-//       const current = Number(res[0]);
-//       const isValid = res[1];
-
-//       if (isValid) {
-//         setCurrentPrice(current);
-//       }
-//     } catch (error) {
-//       console.error("Failed to load current price:", error);
-//     }
-//   };
-
-//   const loadVaultBalances = async () => {
-//     try {
-//       const result = await readContract(getPublicClient(config), {
-//         address: VAULT_ADDRESS,
-//         abi: VAULT_ABI,
-//         functionName: "getUserCollateral",
-//         args: [],
-//         account: address,
-//       });
-
-//       const { deposited, locked, available } = result as {
-//         deposited: bigint;
-//         locked: bigint;
-//         available: bigint;
-//       };
-
-//       setVaultData({
-//         deposited: formatUnits(deposited, 18),
-//         locked: formatUnits(locked, 18),
-//         available: formatUnits(available, 18),
-//       });
-//     } catch (error) {
-//       console.error("Failed to load vault balances:", error);
-//     }
-//   };
-
-//   const openPosition = async (isLong) => {
-//     if (!address) return;
-//     const collateralInWei = parseUnits(baseAmount.toString(), 18);
-//     try {
-//       const walletClient = await getWalletClient(config);
-//       await writeContract(walletClient, {
-//         address: POSITION_MANAGER_ADDRESS,
-//         abi: POSITION_MANAGER_ABI,
-//         functionName: "openPosition",
-//         args: [collateralInWei, leverage, isLong],
-//       });
-      
-//     } catch (error) {
-//       console.error("Failed to open position:", error);
-//       alert("Could not open position.");
-//     }
-//   };
-
-// const closePosition = async () => {
-//     if (!address) return;
-//     toast.info("Closing position...");
-//     try {
-//       const walletClient = await getWalletClient(config);
-//       await writeContract(walletClient, {
-//         address: POSITION_MANAGER_ADDRESS,
-//         abi: POSITION_MANAGER_ABI,
-//         functionName: "closePosition",
-//         args: [tokenID],
-//       });
-//       setIsOpen(false);
-//     } catch (error) {
-//       console.error("Failed to close position:", error);
-//       alert("Could not close position.");
-//     }
-//   };
-  
-//   const loadPositionData = async () => {
-//     if (!address) return;
-//     try {
-//       const publicClient = getPublicClient(config);
-
-//       const tokenID = await readContract(publicClient, {
-//         address: POSITION_NFT_ADDRESS,
-//         abi: POSITION_NFT_ABI,
-//         functionName: "getUserOpenPositions",
-//         args: [address],
-//       });
-
-//       if(tokenID) {
-//         setIsOpen(true);
-//       }
-
-//       setTokenID(String(tokenID));
-
-//       const positionData = await readContract(publicClient, {
-//         address: POSITION_NFT_ADDRESS,
-//         abi: POSITION_NFT_ABI,
-//         functionName: "getPosition",
-//         args: [tokenID],
-//       });
-
-//     } catch (error) {
-//       console.error("Failed to load position data:", error);
-    
-//     }
-//   };
-
-//   useEffect(() => {
-//     loadVaultBalances();
-//     loadPositionData();
-//   }, [address]);
-
-//   useEffect(() => {
-//     loadCurrentPrice();
-//     const interval = setInterval(loadCurrentPrice, 10000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   return (
-//     <DefaultLayout>
-//       <div className="min-h-screen p-6 to-default-100">
-//         <div className="max-w-6xl mx-auto space-y-6">
-//           {/* Vault balances */}
-//           <Card className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 border-none">
-//             <CardBody className="py-4">
-//               <div className="flex justify-center items-center space-x-8">
-//                 <div className="flex items-center space-x-2">
-//                   <Avatar
-//                     className="w-8 h-8"
-//                     src="https://cryptologos.cc/logos/bitcoin-btc-logo.png"
-//                   />
-//                   <div>
-//                     <p className="text-sm text-foreground-500">
-//                       Available vUSDT :
-//                     </p>
-//                     <p className="font-bold">
-//                       ${Number(vaultData.available).toFixed(2)}
-//                     </p>
-//                   </div>
-//                 </div>
-//                 <Divider orientation="vertical" className="h-8" />
-//                 <div>
-//                   <p className="text-sm text-foreground-500">Locked vUSDT :</p>
-//                   <p className="font-bold">
-//                     ${Number(vaultData.locked).toFixed(2)}
-//                   </p>
-//                 </div>
-//                 <Divider orientation="vertical" className="h-8" />
-//                 <div>
-//                   <p className="text-sm text-foreground-500">Funding Rate :</p>
-//                   <p className="font-bold">+{fundingRate}%</p>
-//                 </div>
-//               </div>
-//             </CardBody>
-//           </Card>
-
-//           {/* Price section */}
-//           <Card className="lg:col-span-2 bg-gradient-to-br from-content1 to-content2">
-//             <CardHeader className="pb-2">
-//               <div className="flex justify-between items-center w-full">
-//                 <div className="flex items-center space-x-2">
-//                   <Activity className="w-5 h-5 text-success" />
-//                   <h3 className="text-xl font-bold">vETH / vUSDT</h3>
-//                 </div>
-//                 <Badge color="success" variant="dot">
-//                   Live
-//                 </Badge>
-//               </div>
-//             </CardHeader>
-//             <CardBody className="space-y-4">
-//               <div className="flex items-baseline space-x-2">
-//                 <span className="text-4xl font-bold tracking-tight">
-//                   $ {(currentPrice / 1e18).toFixed(2)}
-//                 </span>
-//               </div>
-//               <div className="flex items-center justify-between">
-//                 <div
-//                   className={`flex items-center space-x-2 ${
-//                     priceChange >= 0 ? "text-success" : "text-danger"
-//                   }`}
-//                 >
-//                   {priceChange >= 0 ? (
-//                     <TrendingUp size={20} />
-//                   ) : (
-//                     <TrendingDown size={20} />
-//                   )}
-//                   <span className="font-semibold text-lg">
-//                     {priceChange >= 0 ? "+" : ""}$
-//                     {Math.abs(priceChange).toFixed(2)}
-//                   </span>
-//                 </div>
-//                 <Chip
-//                   color={priceChange >= 0 ? "success" : "danger"}
-//                   variant="flat"
-//                   size="lg"
-//                 >
-//                   {priceChange >= 0 ? "+" : ""}
-//                   {priceChangePercent.toFixed(2)}%
-//                 </Chip>
-//               </div>
-//               <Progress
-//                 value={Math.abs(priceChangePercent) * 10}
-//                 color={priceChange >= 0 ? "success" : "danger"}
-//                 className="max-w-full"
-//                 size="sm"
-//               />
-//             </CardBody>
-//           </Card>
-
-//           {/* Trading Panel */}
-//           <Card className="lg:col-span-3">
-//             <CardHeader>
-//               <div className="flex items-center space-x-2">
-//                 <Zap className="w-5 h-5 text-warning" />
-//                 <h3 className="text-xl font-bold">Trading Panel</h3>
-//               </div>
-//             </CardHeader>
-//             <CardBody className="space-y-6">
-//               {/* Inputs */}
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//                 <div className="space-y-2">
-//                   <label className="text-sm font-medium flex items-center space-x-1">
-//                     <DollarSign size={14} />
-//                     <span>Base Amount (USDT)</span>
-//                   </label>
-//                   <Input
-//                     type="number"
-//                     value={baseAmount.toString()}
-//                     onChange={(e) =>
-//                       setBaseAmount(parseFloat(e.target.value) || 0)
-//                     }
-//                     placeholder="Enter amount"
-//                     size="lg"
-//                     startContent={
-//                       <DollarSign size={16} className="text-foreground-400" />
-//                     }
-//                   />
-//                 </div>
-//                 <div className="space-y-3">
-//                   <div className="flex justify-between items-center">
-//                     <label className="text-sm font-medium">Leverage</label>
-//                     <Chip color={leverageColor} variant="flat" size="lg">
-//                       {leverage}×
-//                     </Chip>
-//                   </div>
-//                   <Slider
-//                     size="lg"
-//                     step={1}
-//                     minValue={1}
-//                     maxValue={50}
-//                     value={leverage}
-//                     onChange={(value) =>
-//                       setLeverage(Array.isArray(value) ? value[0] : value)
-//                     }
-//                     color={leverageColor}
-//                   />
-//                 </div>
-//               </div>
-
-//               {/* Position Size Display */}
-//               <Card className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30">
-//                 <CardBody className="py-4">
-//                   <div className="flex justify-between items-center">
-//                     <span className="text-foreground-600">Position Size</span>
-//                     <span className="text-2xl font-bold text-violet-600">
-//                       ${positionSize.toLocaleString()}
-//                     </span>
-//                   </div>
-//                 </CardBody>
-//               </Card>
-
-//               {/* Trading Actions */}
-              
-//                 <div className="grid grid-cols-2 gap-4">
-//                   <Button
-//                     color="success"
-//                     size="lg"
-//                     onPress={() => openPosition(true)}
-//                   >
-//                     Long
-//                   </Button>
-//                   <Button
-//                     color="danger"
-//                     size="lg"
-//                     onPress={() => openPosition(false)}
-//                   >
-//                     Short
-//                   </Button>
-//                 </div>
-             
-//                 <div className="space-y-4">
-//                   {/* PnL */}
-//                   <Card>
-//                     <CardBody className="py-6">
-//                       <div className="text-center space-y-2">
-//                         <p className="text-sm text-foreground-500">
-//                           Unrealized PnL
-//                         </p>
-//                         <p
-//                           className={`text-4xl font-bold ${
-//                             pnl >= 0 ? "text-success" : "text-danger"
-//                           }`}
-//                         >
-//                           {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
-//                         </p>
-//                       </div>
-//                     </CardBody>
-//                   </Card>
-//                   <Button color="primary" size="lg" onPress={closePosition}>
-//                     Close Position
-//                   </Button>
-//                 </div>
-              
-//             </CardBody>
-//           </Card>
-//         </div>
-//         {/* Toast Container */}
-//         <ToastContainer
-//           position="bottom-right"
-//           autoClose={4000}
-//           hideProgressBar={false}
-//           newestOnTop={false}
-//           closeOnClick
-//           rtl={false}
-//           draggable
-//           theme="dark"
-//           // toastClassName="bg-content1 border border-violet-200/30"
-//         />
-//       </div>
-//       <div>
-//         <Button onPress={loadPositionData}>
-//               load pos data
-//         </Button>
-//         <Button onPress={closePosition}>
-//               close
-//         </Button>
-//       </div>
-//     </DefaultLayout>
-//   );
-// }
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Divider } from "@heroui/divider";
 import { Avatar } from "@heroui/avatar";
@@ -426,8 +14,9 @@ import { getPublicClient, getWalletClient } from "wagmi/actions";
 import { readContract, writeContract } from "viem/actions";
 import { formatUnits, parseUnits } from "viem";
 import { useAccount } from "wagmi";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { AdvancedChart } from "react-tradingview-embed";
 
 import {
   Activity,
@@ -441,14 +30,13 @@ import {
   Wallet,
   BarChart3,
   Target,
-  Lock
+  Lock,
 } from "lucide-react";
 
 import VAULT_ABI from "@/abis/vault.json";
 import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
 import POSITION_NFT_ABI from "@/abis/positionNFT.json";
 import VAMM_ABI from "@/abis/vamm.json";
-import { base } from "viem/chains";
 
 export default function TradingPage() {
   const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
@@ -462,9 +50,16 @@ export default function TradingPage() {
   const [currentPrice, setCurrentPrice] = useState(0);
   const [priceChange, setPriceChange] = useState(0);
   const [priceChangePercent, setPriceChangePercent] = useState(0);
-  const [tokenID, setTokenID] = useState<number | null>(null);
+  const [tokenID, setTokenID] = useState(null);
   const [fundingRate, setFundingRate] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalLong: 0,
+    totalShort: 0,
+    totalLongCollateral: 0,
+    totalShortCollateral: 0,
+    fundingRateAccumulated: 0,
+  });
 
   const [vaultData, setVaultData] = useState({
     deposited: "0.00",
@@ -472,10 +67,22 @@ export default function TradingPage() {
     available: "0.00",
   });
 
+  const [positionData, setPositionData] = useState({
+    tokenID: 0,
+    colleteral: 0,
+    leverage: 0,
+    entryPrice: 0,
+    entryTimestamp: 0,
+    entryFundingRate: 0,
+    isLong: false,
+    isOpen: false,
+    symbol: "",
+  });
+
   // Trading states
   const [baseAmount, setBaseAmount] = useState(0);
   const [leverage, setLeverage] = useState(1);
-  const [position, setPosition] = useState(null);
+  const [position, setPosition] = useState("");
   const [entryPrice, setEntryPrice] = useState(0);
   const [pnl, setPnl] = useState(0);
 
@@ -486,11 +93,11 @@ export default function TradingPage() {
   const loadCurrentPrice = async () => {
     try {
       const publicClient = getPublicClient(config);
-      const res = await readContract(publicClient, {
+      const res = (await readContract(publicClient, {
         address: VAMM_ADDRESS,
         abi: VAMM_ABI,
         functionName: "getCurrentPrice",
-      });
+      })) as any;
       console.log("Current price response:", res);
       const current = Number(res[0]);
       const isValid = res[1];
@@ -529,10 +136,10 @@ export default function TradingPage() {
     }
   };
 
-  const openPosition = async (isLong) => {
+  const openPosition = async (isLong: boolean) => {
     if (!address) return;
-    
-    const collateralInWei = parseUnits(baseAmount.toString(), 6);
+
+    const collateralInWei = parseUnits(baseAmount.toString(), 18);
     try {
       const walletClient = await getWalletClient(config);
       await writeContract(walletClient, {
@@ -541,13 +148,12 @@ export default function TradingPage() {
         functionName: "openPosition",
         args: [collateralInWei, leverage, isLong],
       });
-      
+      loadPositionData();
     } catch (error) {
       console.error("Failed to open position:", error);
       alert("Could not open position.");
     }
   };
-
 
   const closePosition = async () => {
     if (!address) return;
@@ -567,41 +173,90 @@ export default function TradingPage() {
       alert("Could not close position.");
     }
   };
-  
   const loadPositionData = async () => {
     if (!address) return;
     try {
       const publicClient = getPublicClient(config);
 
-      const tokenID = await readContract(publicClient, {
+      const tokenIDs = (await readContract(publicClient, {
         address: POSITION_NFT_ADDRESS,
         abi: POSITION_NFT_ABI,
         functionName: "getUserOpenPositions",
         args: [address],
-      });
+      })) as any;
 
-      if(tokenID) {
-        setIsOpen(true);
+      if (!tokenIDs || tokenIDs.length === 0) {
+        setIsOpen(false);
+        setTokenID(null);
+        return;
       }
 
-      setTokenID(String(tokenID));
+      const tokenID = tokenIDs[0]; // assuming only one open position
+      setTokenID(tokenID);
+      setIsOpen(true);
 
-      const positionData = await readContract(publicClient, {
+      const res = (await readContract(publicClient, {
         address: POSITION_NFT_ADDRESS,
         abi: POSITION_NFT_ABI,
         functionName: "getPosition",
         args: [tokenID],
-      });
+      })) as any;
 
+      // map array into object
+      const mapped = {
+        tokenID: Number(res[0]),
+        collateral: Number(formatUnits(res[1], 18)),
+        leverage: Number(res[2]),
+        entryPrice: Number(formatUnits(res[3], 18)),
+        entryTimestamp: Number(res[4]),
+        entryFundingRate: Number(res[5]),
+        isLong: res[6],
+        isOpen: res[7],
+        symbol: res[8],
+      } as any;
+
+      setPositionData(mapped);
+      console.log("Mapped position data:", mapped);
     } catch (error) {
       console.error("Failed to load position data:", error);
-    
+    }
+  };
+
+  const getPositionStats = async () => {
+    if (!address) return;
+    try {
+      const stats = (await readContract(getPublicClient(config), {
+        address: POSITION_MANAGER_ADDRESS,
+        abi: POSITION_MANAGER_ABI,
+        functionName: "getPositionStats",
+        args: [],
+        account: address,
+      })) as any;
+      console.log("Position stats:", stats);
+      setStats({
+        totalLong: Number(stats[0]),
+        totalShort: Number(formatUnits(stats[1], 18)),
+        totalLongCollateral: Number(formatUnits(stats[2], 18)),
+        totalShortCollateral: Number(formatUnits(stats[3], 18)),
+        fundingRateAccumulated: Number(formatUnits(stats[4], 18)),
+      });
+
+      console.log("Position stats set:", {
+        totalLong: stats[0].toString(),
+        totalShort: stats[1].toString(),
+        totalLongCollateral: stats[2].toString(),
+        totalShortCollateral: stats[3].toString(),
+        fundingRateAccumulated: stats[4].toString(),
+      });
+    } catch (error) {
+      console.error("Failed to get position stats:", error);
     }
   };
 
   useEffect(() => {
     loadVaultBalances();
     loadPositionData();
+    getPositionStats();
   }, [address]);
 
   useEffect(() => {
@@ -609,6 +264,28 @@ export default function TradingPage() {
     const interval = setInterval(loadCurrentPrice, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const Chart = useMemo(
+    () => (
+      <div className="flex-1 rounded-2xl p-[2px] bg-gradient-to-br from-purple-500/50 via-blue-500/40 to-cyan-400/40 shadow-lg">
+        <div className="rounded-2xl bg-black/70 backdrop-blur-md overflow-hidden h-full">
+          <AdvancedChart
+            widgetProps={{
+              symbol: "BINANCE:ETHUSDT",
+              theme: "dark",
+              interval: "60",
+              timezone: "Asia/Kolkata", // Indian Standard Time
+              autosize: true,
+              style: "1",
+              locale: "en",
+              height: "100%",
+            }}
+          />
+        </div>
+      </div>
+    ),
+    []
+  );
 
   return (
     <DefaultLayout>
@@ -621,43 +298,51 @@ export default function TradingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-violet-100 text-sm">Available Balance</p>
-                    <p className="text-2xl font-bold">${Number(vaultData.available).toFixed(2)}</p>
+                    <p className="text-2xl font-bold">
+                      ${Number(vaultData.available).toFixed(2)}
+                    </p>
                   </div>
                   <Wallet className="w-8 h-8 text-violet-200" />
                 </div>
               </CardBody>
             </Card>
-            
+
             <Card className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
               <CardBody className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-blue-100 text-sm">Locked Funds</p>
-                    <p className="text-2xl font-bold">${Number(vaultData.locked).toFixed(2)}</p>
+                    <p className="text-2xl font-bold">
+                      ${Number(vaultData.locked).toFixed(2)}
+                    </p>
                   </div>
                   <Lock className="w-8 h-8 text-blue-200" />
                 </div>
               </CardBody>
             </Card>
-            
+
             <Card className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
               <CardBody className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-emerald-100 text-sm">Funding Rate</p>
-                    <p className="text-2xl font-bold">+{fundingRate}%</p>
+                    <p className="text-2xl font-bold">
+                      +{stats.fundingRateAccumulated}%
+                    </p>
                   </div>
                   <BarChart3 className="w-8 h-8 text-emerald-200" />
                 </div>
               </CardBody>
             </Card>
-            
+
             <Card className="bg-gradient-to-r from-amber-500 to-orange-600 text-white">
               <CardBody className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-amber-100 text-sm">Total Deposited</p>
-                    <p className="text-2xl font-bold">${Number(vaultData.deposited).toFixed(2)}</p>
+                    <p className="text-2xl font-bold">
+                      ${Number(vaultData.deposited).toFixed(2)}
+                    </p>
                   </div>
                   <Target className="w-8 h-8 text-amber-200" />
                 </div>
@@ -678,10 +363,12 @@ export default function TradingPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold">vETH / vUSDT</h3>
-                        <p className="text-sm text-foreground-500">Perpetual Futures</p>
+                        <p className="text-sm text-foreground-500">
+                          Perpetual Futures
+                        </p>
                       </div>
                     </div>
-                    <Badge color="success" variant="flat">
+                    <Badge color="success">
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
                         <span>Live</span>
@@ -696,7 +383,9 @@ export default function TradingPage() {
                         <span className="text-4xl font-bold tracking-tight">
                           $ {(currentPrice / 1e18).toFixed(2)}
                         </span>
-                        <span className="text-lg text-foreground-500">per vETH</span>
+                        <span className="text-lg text-foreground-500">
+                          per vETH
+                        </span>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div
@@ -725,19 +414,20 @@ export default function TradingPage() {
                       </div>
                     </div>
                     <div className="bg-default-100 rounded-lg p-3">
-                      <div className="text-xs text-foreground-500 mb-1">24h Volume</div>
-                      <div className="text-lg font-semibold">$124.5M</div>
+                      <div className="text-xs text-foreground-500 mb-1">
+                        Total Volume
+                      </div>
+                      <div className="text-lg font-semibold">
+                        $
+                        {stats.totalLongCollateral + stats.totalShortCollateral}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="h-64 bg-default-50 rounded-xl flex items-center justify-center">
-                    <div className="text-center text-foreground-400">
-                      <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-                      <p>Price Chart Visualization</p>
-                      <p className="text-sm">Interactive chart would appear here</p>
-                    </div>
-                  </div>
-                  
+
+                  <CardBody className="flex flex-col h-[400px]">
+                    {Chart}
+                  </CardBody>
+
                   <Progress
                     value={Math.abs(priceChangePercent) * 10}
                     color={priceChange >= 0 ? "success" : "danger"}
@@ -756,15 +446,19 @@ export default function TradingPage() {
                   </div>
                 </CardHeader>
                 <CardBody>
-                  {isOpen ? (
+                  {positionData.isOpen ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-success/10 rounded-lg">
                         <p className="text-sm text-success">Position Type</p>
-                        <p className="font-bold">LONG</p>
+                        <p className="font-bold">{positionData.symbol}</p>
                       </div>
                       <div className="text-center p-3 bg-default-100 rounded-lg">
-                        <p className="text-sm text-foreground-500">Entry Price</p>
-                        <p className="font-bold">$3,245.67</p>
+                        <p className="text-sm text-foreground-500">
+                          Entry Price
+                        </p>
+                        <p className="font-bold">
+                          ${positionData.entryPrice.toFixed(2)}
+                        </p>
                       </div>
                       <div className="text-center p-3 bg-default-100 rounded-lg">
                         <p className="text-sm text-foreground-500">Leverage</p>
@@ -772,14 +466,23 @@ export default function TradingPage() {
                       </div>
                       <div className="text-center p-3 bg-success/10 rounded-lg">
                         <p className="text-sm text-success">PnL</p>
-                        <p className="font-bold">+$124.50</p>
+                        <p className="font-bold">
+                          {" "}
+                          +$
+                          {(
+                            currentPrice / 1e18 -
+                            positionData.entryPrice
+                          ).toFixed(2)}
+                        </p>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-foreground-400">
                       <Target className="w-12 h-12 mx-auto mb-3" />
                       <p>No active position</p>
-                      <p className="text-sm">Open a position to start trading</p>
+                      <p className="text-sm">
+                        Open a position to start trading
+                      </p>
                     </div>
                   )}
                 </CardBody>
@@ -874,27 +577,41 @@ export default function TradingPage() {
                   <Card className="bg-white/50 dark:bg-default-100/50">
                     <CardBody className="py-4 space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-foreground-600">Position Size</span>
-                        <span className="font-semibold">${positionSize.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-foreground-600">Margin Required</span>
-                        <span className="font-semibold">${baseAmount.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-foreground-600">Estimated Liq. Price</span>
-                        <span className="font-semibold">$2,890.00</span>
+                        <span className="text-foreground-600">
+                          Position Size
+                        </span>
+                        <span className="font-semibold">
+                          ${positionSize.toLocaleString()}
+                        </span>
                       </div>
                     </CardBody>
                   </Card>
 
                   {/* Action Buttons */}
-                  {isOpen && (
-                    <Button 
-                      color="primary" 
-                      size="lg" 
+                  {/* {isOpen && (
+                    <Button
+                      color="primary"
+                      size="lg"
                       onPress={closePosition}
                       className="w-full h-12"
+                    >
+                      Close Position
+                    </Button>
+                  )} */}
+                  {isOpen ? (
+                    <Button
+                      color="primary"
+                      size="lg"
+                      onPress={closePosition}
+                      className="w-full h-12"
+                    >
+                      Close Position
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      isDisabled
+                      className="w-full h-12 cursor-not-allowed"
                     >
                       Close Position
                     </Button>
@@ -904,7 +621,7 @@ export default function TradingPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Toast Container */}
         <ToastContainer
           position="bottom-right"
