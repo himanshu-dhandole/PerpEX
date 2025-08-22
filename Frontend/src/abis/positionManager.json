@@ -200,12 +200,6 @@
 				"internalType": "address",
 				"name": "liquidator",
 				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "liquidationReward",
-				"type": "uint256"
 			}
 		],
 		"name": "PositionLiquidated",
