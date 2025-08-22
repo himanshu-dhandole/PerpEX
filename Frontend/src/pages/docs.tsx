@@ -13,6 +13,7 @@ import PRICE_ORACLE_ABI from "@/abis/priceOracle.json";
 import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
 import POSITION_NFT_ABI from "@/abis/positionNFT.json";
 import VAMM_ABI from "@/abis/vamm.json";
+import { Button } from "@heroui/button";
 
 export default function DocsPage() {
   const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
@@ -113,24 +114,24 @@ export default function DocsPage() {
     }
   };
 
-  // const loadCurrentPrice = async () => {
-  //   if (!address) return;
+  const priceAmm = async () => {
+    if (!address) return;
 
-  //   try {
-  //     const publicClient = getPublicClient(config);
+    try {
+      const publicClient = getPublicClient(config);
 
-  //     const [price , isValid] = await readContract(publicClient, {
-  //       address: VAMM_ADDRESS,
-  //       abi: VAMM_ABI,
-  //       functionName: "getCurrentPrice",
-  //     });
+      const [price , isValid] = await readContract(publicClient, {
+        address: VAMM_ADDRESS,
+        abi: VAMM_ABI,
+        functionName: "getCurrentPrice",
+      });
 
-  //     console.log("Current price:", price);
-  //   } catch (error) {
-  //     console.error("Failed to fetch current price:", error);
-  //     alert("Could not load current price.");
-  //   }
-  // };
+      console.log("Current price:", price);
+    } catch (error) {
+      console.error("Failed to fetch current price:", error);
+      alert("Could not load current price.");
+    }
+  };
 
   const loadCurrentPrice = async () => {
     try {
@@ -193,7 +194,7 @@ export default function DocsPage() {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "openPosition",
-        args: [100 * 1e18, 1, true],
+        args: [10000, 1, true],
       });
     } catch (error) {
       console.error("Failed to open position:", error);
@@ -238,8 +239,8 @@ export default function DocsPage() {
 
   return (
     <DefaultLayout>
-      <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
-        <div className="inline-block max-w-lg text-center justify-center">
+      <section className=" flex flex-col items-center justify-center gap-4 py-8 md:py-10">
+        <div className="inline-block  text-center justify-center">
           <h1 className={title()}>Docs</h1>
           <br />
           <button
@@ -305,16 +306,25 @@ export default function DocsPage() {
         <button onClick={loadPositionData}> Load Position Data</button>
       </section>
 
-      <hr />
-      <hr />
+      <br />
+      <br />
       <button onClick={closePosition}>Close Position</button>
-
+      <br />
       <button
         onClick={setInitialPrice}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
         Set Initial Price
       </button>
+    <br />
+      <Button onPress={priceAmm}>
+        priceAMM
+      </Button>
+      <br /><br />
+      <Button >
+        
+      </Button>
+
     </DefaultLayout>
   );
 }
