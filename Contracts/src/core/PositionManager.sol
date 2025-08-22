@@ -84,11 +84,11 @@ contract PositionManager is Ownable, ReentrancyGuard {
         if (leverage == 0 || leverage > MAX_LEVERAGE) revert InvalidLeverage();
 
         uint256 notionalSize = collateral * leverage;
-        uint256 fees = (notionalSize * TRADING_FEES_BPS) / 10000;
+        uint256 fees = (collateral * TRADING_FEES_BPS) / 10000;
         if (collateral <= fees) revert InsufficientFunds();
         uint256 netCollateral = collateral - fees;
 
-        vault.lockCollateral(msg.sender, collateral);
+        vault.lockCollateral(msg.sender, netCollateral);
         virtualAMM.updateReserve(notionalSize, isLong);
 
         uint256 entryPrice = uint256(priceOracle.getLatestPrice());
@@ -123,7 +123,7 @@ contract PositionManager is Ownable, ReentrancyGuard {
         require(isValid, "Invalid price");
 
         uint256 notionalSize = pos.collateral * pos.leverage;
-        uint256 fees = (notionalSize * TRADING_FEES_BPS) / 10000;
+        uint256 fees = (pos.collateral * TRADING_FEES_BPS) / 10000;
 
         int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
         int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);

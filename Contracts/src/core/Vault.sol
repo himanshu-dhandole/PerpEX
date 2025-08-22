@@ -54,6 +54,8 @@ contract Vault is Ownable {
         userData[msg.sender].deposited += _amount;
         totalDeposited += _amount;
 
+        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+
         emit Deposited(msg.sender, _amount);
     }
 
@@ -61,11 +63,14 @@ contract Vault is Ownable {
     function withdrawal(uint256 _amount) external {
         require(_amount > 0, "Amount cannot be zero");
         require(userData[msg.sender].available >= _amount, "Insufficient funds");
-        require(vUSDT.transfer(msg.sender, _amount), "Transfer failed");
 
         userData[msg.sender].available -= _amount;
         userData[msg.sender].deposited -= _amount;
         totalDeposited -= _amount;
+
+        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+        
+        require(vUSDT.transfer(msg.sender, _amount), "Transfer failed");
 
         emit Withdrawn(msg.sender, _amount);
     }
@@ -97,6 +102,8 @@ contract Vault is Ownable {
         userData[_user].available += _amount;
         totalLocked -= _amount;
 
+        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+
         emit CollateralUnlocked(_user, _amount);
     }
 
@@ -105,7 +112,6 @@ contract Vault is Ownable {
         require(_amount > 0, "Amount cannot be zero");
         require(totalLocked >= _amount, "Vault lacks locked funds");
 
-        userData[address(this)].locked -= _amount;
         userData[_to].available += _amount;
         totalLocked -= _amount;
 

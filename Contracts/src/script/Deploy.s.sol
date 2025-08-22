@@ -27,7 +27,9 @@ contract DeployPerpex is Script {
         console.log("PositionNFT deployed:", address(nft));
 
         // 3. Deploy PriceFeed
-        PriceOracle feed = new PriceOracle(0x694AA1769357215DE4FAC081bf1f309aDC325306);
+        PriceOracle feed = new PriceOracle(
+            0x694AA1769357215DE4FAC081bf1f309aDC325306
+        );
         console.log("PriceFeed deployed:", address(feed));
 
         // 4. Deploy Vault
@@ -35,7 +37,11 @@ contract DeployPerpex is Script {
         console.log("Vault deployed:", address(vault));
 
         // 5. Deploy vAMM
-        VirtualAMM amm = new VirtualAMM(10000000000,10000000000, address(feed));
+        VirtualAMM amm = new VirtualAMM(
+            10000000000,
+            10000000000,
+            address(feed)
+        );
         console.log("vAMM deployed:", address(amm));
 
         // 6. Deploy PositionManager
@@ -51,7 +57,7 @@ contract DeployPerpex is Script {
         nft.setPositionManager(address(manager));
         vault.setPositionManager(address(manager));
         amm.setPositionManager(address(manager));
-     
+        amm.setInitialPrice();
 
         vm.stopBroadcast();
     }
