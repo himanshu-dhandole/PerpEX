@@ -43,7 +43,7 @@ contract PositionManager is Ownable, ReentrancyGuard {
     // Events
     event PositionOpened(uint256 indexed tokenId, address indexed user, uint256 collateral, uint8 leverage, uint256 entryPrice, bool isLong);
     event PositionClosed(uint256 indexed tokenId, address indexed user, int256 pnl, int256 fundingPayment, uint256 fees);
-    event PositionLiquidated(uint256 indexed tokenId, address indexed user, address indexed liquidator, uint256 liquidationReward);
+    event PositionLiquidated(uint256 indexed tokenId, address indexed user, address indexed liquidator);
     event FundingRateUpdated(int256 newRate, int256 accumulated);
     event EmergencyPauseToggled(bool paused);
 
@@ -91,7 +91,10 @@ contract PositionManager is Ownable, ReentrancyGuard {
         vault.lockCollateral(msg.sender, netCollateral);
         virtualAMM.updateReserve(notionalSize, isLong);
 
-        uint256 entryPrice = uint256(priceOracle.getLatestPrice());
+        (uint256 entryPriceByAMM, bool isValid) = virtualAMM.getCurrentPrice();
+        require(isValid, "Invalid price");
+        uint256 entryPrice = entryPriceByAMM;
+
         int256 entryFundingRate = virtualAMM.calculateFundingRate();
 
         if (isLong) {
@@ -127,7 +130,7 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
         int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);
-        int256 settlementAmount = int256(pos.collateral) + pnl - fundingPayment - int256(fees);
+        int256 settlementAmount = int256(pos.collateral) + pnl + fundingPayment - int256(fees);
 
         if (pos.isLong) {
             totalLong -= notionalSize;
@@ -139,11 +142,21 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         positionNFT.burnPosition(tokenId);
 
-        if (settlementAmount > 0) {
-            vault.unlockCollateral(msg.sender, uint256(settlementAmount));
-        } else {
-            vault.absorbLiquidatedCollateral(msg.sender, pos.collateral);
+        vault.unlockCollateral(msg.sender, pos.collateral);
+
+        if(settlementAmount > int256(pos.collateral)) {
+            uint256 profit = uint(settlementAmount) - pos.collateral;
+            vault.payOutProfit(msg.sender, profit);
+        } else{
+            uint256 loss = pos.collateral - uint(settlementAmount);
+            vault.absorbLoss(msg.sender , loss);
         }
+
+        // if (settlementAmount > 0) {
+        //     vault.unlockCollateral(msg.sender, uint256(settlementAmount));
+        // } else {
+        //     vault.absorbLiquidatedCollateral(msg.sender, pos.collateral);
+        // }
 
         emit PositionClosed(tokenId, msg.sender, pnl, fundingPayment, fees);
     }
@@ -161,8 +174,7 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
         int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);
-        uint256 liquidationReward = (pos.collateral * 200) / 10000;
-        int256 remainingValue = int256(pos.collateral) + pnl - fundingPayment - int256(liquidationReward);
+        int256 remainingValue = int256(pos.collateral) + pnl + fundingPayment;
 
         uint256 notionalSize = pos.collateral * pos.leverage;
         if (pos.isLong) {
@@ -175,17 +187,13 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         positionNFT.burnPosition(tokenId);
 
-        if (liquidationReward > 0) {
-            vault.transferCollateral(msg.sender, liquidationReward);
-        }
-
         if (remainingValue > 0) {
-            vault.unlockCollateral(owner, uint256(remainingValue));
+            vault.absorbLoss(owner, uint256(remainingValue));
         }
 
-        vault.absorbLiquidatedCollateral(owner, pos.collateral);
+        vault.absorbLoss(owner, pos.collateral);
 
-        emit PositionLiquidated(tokenId, owner, msg.sender, liquidationReward);
+        emit PositionLiquidated(tokenId, owner, msg.sender);
     }
 
     function updateFundingRate() external onlyOwner {

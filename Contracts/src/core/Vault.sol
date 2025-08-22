@@ -29,8 +29,9 @@ contract Vault is Ownable {
     event CollateralUnlocked(address indexed user, uint256 amount);
     event CollateralTransferred(address indexed to, uint256 amount);
 
-    constructor(address _vUSDTaddress) Ownable(msg.sender) {
+    constructor(address _vUSDTaddress , uint256 _initialSupply) Ownable(msg.sender) {
         vUSDT = IERC20(_vUSDTaddress);
+        totalDeposited += _initialSupply;
     }
 
     // Restricts to position manager
@@ -108,28 +109,50 @@ contract Vault is Ownable {
     }
 
     // Transfer locked funds from vault to a user (e.g., after liquidation)
-    function transferCollateral(address _to, uint256 _amount) external onlyPositionManager {
-        require(_amount > 0, "Amount cannot be zero");
-        require(totalLocked >= _amount, "Vault lacks locked funds");
+    // function transferCollateral(address _to, uint256 _amount) external onlyPositionManager {
+    //     require(_amount > 0, "Amount cannot be zero");
+    //     require(totalLocked >= _amount, "Vault lacks locked funds");
 
-        userData[_to].available += _amount;
-        totalLocked -= _amount;
+    //     userData[_to].available += _amount;
+    //     totalLocked -= _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+    //     utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
 
-        emit CollateralTransferred(_to, _amount);
-    }
+    //     emit CollateralTransferred(_to, _amount);
+    // }
 
     // Reduce locked collateral when a user is liquidated
-    function absorbLiquidatedCollateral(address _user, uint256 _amount) external onlyPositionManager {
-        require(_amount > 0, "Amount must be greater than 0");
-        require(userData[_user].locked >= _amount, "Not enough locked funds");
+    // function absorbLiquidatedCollateral(address _user, uint256 _amount) external onlyPositionManager {
+    //     require(_amount > 0, "Amount must be greater than 0");
+    //     require(userData[_user].locked >= _amount, "Not enough locked funds");
 
-        userData[_user].locked -= _amount;
-        totalLocked -= _amount;
+    //     userData[_user].locked -= _amount;
+    //     totalLocked -= _amount;
+
+    //     utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+    // }
+
+    // Paying out users Profit on a position while closing
+    function payOutProfit(address _to , uint256 _amount) external onlyPositionManager {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(totalDeposited >= _amount, "Vault lacks funds");
+
+        userData[_to].available += _amount;
+        totalDeposited -= _amount;
 
         utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
     }
+
+    // Absorbing users losses into vaults address
+    function absorbLoss(address _user , uint256 _amount)external onlyPositionManager{
+     require(_amount > 0, "Amount must be greater than 0");
+     require(userData[_user].available >= _amount, "Insufficient available funds");
+
+        totalDeposited += _amount;
+        userData[_user].available -= _amount;
+
+        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+   }
 
     // View user's deposit/available/locked balances
     function getUserCollateral() external view returns (UserData memory) {
