@@ -7,4 +7,6 @@ interface IVirtualAMM {
     function calculateFundingRate() external view returns (int256);
 
     function getCurrentPrice() external view returns (uint256, bool);
+
+    function getCurrentFundingRate() external view returns (int256);
 }

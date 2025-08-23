@@ -12,7 +12,7 @@ import "../interfaces/IVault.sol";
 contract PositionManager is Ownable, ReentrancyGuard {
     // Constants
     uint256 public constant MAX_LEVERAGE = 50;
-    uint256 public constant TRADING_FEES_BPS = 500; // 5%
+    uint256 public constant TRADING_FEES_BPS = 5; // 0.05%
     uint256 public constant LIQUIDATION_THRESHOLD_BPS = 500; // 5%
     uint256 public constant FUNDING_INTERVAL = 8 hours;
 
@@ -158,6 +158,8 @@ contract PositionManager is Ownable, ReentrancyGuard {
         //     vault.absorbLiquidatedCollateral(msg.sender, pos.collateral);
         // }
 
+        virtualAMM.updateReserve(notionalSize, !pos.isLong);
+
         emit PositionClosed(tokenId, msg.sender, pnl, fundingPayment, fees);
     }
 
@@ -277,6 +279,10 @@ contract PositionManager is Ownable, ReentrancyGuard {
         int256 maintenanceMargin = int256(collateral * LIQUIDATION_THRESHOLD_BPS) / 10000;
 
         return remainingValue <= maintenanceMargin;
+    }
+
+    function getCurrentFundingRate() external view returns (int256 currentFundingRate){
+        return virtualAMM.calculateFundingRate();
     }
 
     function getPositionStats() external view returns (

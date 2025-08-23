@@ -8,19 +8,19 @@ contract Vault is Ownable {
     // Tracks each user's funds
     struct UserData {
         uint256 deposited; // Total funds deposited by user
-        uint256 locked;    // Funds locked in open positions
+        uint256 locked; // Funds locked in open positions
         uint256 available; // Funds available for withdrawal or trading
     }
 
     mapping(address => UserData) private userData;
 
-    uint256 public totalLocked;         // Total locked across all users
-    uint256 public totalDeposited;      // Total deposited across all users
-    uint256 public utilizationRate;     // Percentage of locked to deposited
+    uint256 public totalLocked; // Total locked across all users
+    uint256 public totalDeposited; // Total deposited across all users
+    uint256 public utilizationRate; // Percentage of locked to deposited
     uint256 public constant MAX_UTILIZATION = 8000; // 80% cap
 
-    address public positionManager;     // Authorized to manage collateral
-    IERC20 public immutable vUSDT;      // Collateral token (e.g., vUSDT)
+    address public positionManager; // Authorized to manage collateral
+    IERC20 public immutable vUSDT; // Collateral token (e.g., vUSDT)
 
     // Events
     event Deposited(address indexed user, uint256 amount);
@@ -29,7 +29,10 @@ contract Vault is Ownable {
     event CollateralUnlocked(address indexed user, uint256 amount);
     event CollateralTransferred(address indexed to, uint256 amount);
 
-    constructor(address _vUSDTaddress , uint256 _initialSupply) Ownable(msg.sender) {
+    constructor(
+        address _vUSDTaddress,
+        uint256 _initialSupply
+    ) Ownable(msg.sender) {
         vUSDT = IERC20(_vUSDTaddress);
         totalDeposited += _initialSupply;
     }
@@ -48,14 +51,22 @@ contract Vault is Ownable {
     // Deposit vUSDT into the vault
     function deposit(uint256 _amount) external {
         require(_amount > 0, "Amount cannot be zero");
-        require(vUSDT.allowance(msg.sender, address(this)) >= _amount, "Insufficient allowance");
-        require(vUSDT.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
+        require(
+            vUSDT.allowance(msg.sender, address(this)) >= _amount,
+            "Insufficient allowance"
+        );
+        require(
+            vUSDT.transferFrom(msg.sender, address(this), _amount),
+            "Transfer failed"
+        );
 
         userData[msg.sender].available += _amount;
         userData[msg.sender].deposited += _amount;
         totalDeposited += _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+        utilizationRate = totalDeposited == 0
+            ? 0
+            : (totalLocked * 10000) / totalDeposited;
 
         emit Deposited(msg.sender, _amount);
     }
@@ -63,21 +74,29 @@ contract Vault is Ownable {
     // Withdraw vUSDT from the vault
     function withdrawal(uint256 _amount) external {
         require(_amount > 0, "Amount cannot be zero");
-        require(userData[msg.sender].available >= _amount, "Insufficient funds");
+        require(
+            userData[msg.sender].available >= _amount,
+            "Insufficient funds"
+        );
 
         userData[msg.sender].available -= _amount;
         userData[msg.sender].deposited -= _amount;
         totalDeposited -= _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
-        
+        utilizationRate = totalDeposited == 0
+            ? 0
+            : (totalLocked * 10000) / totalDeposited;
+
         require(vUSDT.transfer(msg.sender, _amount), "Transfer failed");
 
         emit Withdrawn(msg.sender, _amount);
     }
 
     // Lock funds for an open position
-    function lockCollateral(address _user, uint256 _amount) external onlyPositionManager {
+    function lockCollateral(
+        address _user,
+        uint256 _amount
+    ) external onlyPositionManager {
         require(_amount > 0, "Amount cannot be zero");
         require(userData[_user].available >= _amount, "Not enough available");
 
@@ -95,7 +114,10 @@ contract Vault is Ownable {
     }
 
     // Unlock funds after position is closed
-    function unlockCollateral(address _user, uint256 _amount) external onlyPositionManager {
+    function unlockCollateral(
+        address _user,
+        uint256 _amount
+    ) external onlyPositionManager {
         require(_amount > 0, "Amount cannot be zero");
         require(userData[_user].locked >= _amount, "Insufficient locked funds");
 
@@ -103,7 +125,9 @@ contract Vault is Ownable {
         userData[_user].available += _amount;
         totalLocked -= _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+        utilizationRate = totalDeposited == 0
+            ? 0
+            : (totalLocked * 10000) / totalDeposited;
 
         emit CollateralUnlocked(_user, _amount);
     }
@@ -133,40 +157,56 @@ contract Vault is Ownable {
     // }
 
     // Paying out users Profit on a position while closing
-    function payOutProfit(address _to , uint256 _amount) external onlyPositionManager {
+    function payOutProfit(
+        address _to,
+        uint256 _amount
+    ) external onlyPositionManager {
         require(_amount > 0, "Amount must be greater than 0");
         require(totalDeposited >= _amount, "Vault lacks funds");
 
         userData[_to].available += _amount;
         totalDeposited -= _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
+        utilizationRate = totalDeposited == 0
+            ? 0
+            : (totalLocked * 10000) / totalDeposited;
     }
 
     // Absorbing users losses into vaults address
-    function absorbLoss(address _user , uint256 _amount)external onlyPositionManager{
-     require(_amount > 0, "Amount must be greater than 0");
-     require(userData[_user].available >= _amount, "Insufficient available funds");
+    function absorbLoss(
+        address _user,
+        uint256 _amount
+    ) external onlyPositionManager {
+        require(_amount > 0, "Amount must be greater than 0");
+        require(
+            userData[_user].available >= _amount,
+            "Insufficient available funds"
+        );
 
         totalDeposited += _amount;
         userData[_user].available -= _amount;
 
-        utilizationRate = totalDeposited == 0 ? 0 : (totalLocked * 10000) / totalDeposited;
-   }
+        utilizationRate = totalDeposited == 0
+            ? 0
+            : (totalLocked * 10000) / totalDeposited;
+    }
 
     // View user's deposit/available/locked balances
     function getUserCollateral() external view returns (UserData memory) {
         return userData[msg.sender];
     }
 
-    // Get current vault utilization
-    function getUtilizationRate() external view returns (uint256) {
-        return utilizationRate;
-    }
-
-    // Get total liquidity in vault
-    function getTotalLiquidity() external view returns (uint256) {
-        return totalDeposited;
+    // Get current vault stats
+    function getVaultStats()
+        external
+        view
+        returns (
+            uint256 _totalDeposited,
+            uint256 _totalLocked,
+            uint256 _utilizationRate
+        )
+    {
+        return (totalDeposited, totalLocked, utilizationRate);
     }
 
     // Prevent direct ETH or wrong function calls
