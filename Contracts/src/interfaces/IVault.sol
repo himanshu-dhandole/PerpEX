@@ -16,8 +16,10 @@ interface IVault {
     // Manager-only functions
     function lockCollateral(address _user, uint256 _amount) external;
     function unlockCollateral(address _user, uint256 _amount) external;
-    function transferCollateral(address _to, uint256 _amount) external;
-    function absorbLiquidatedCollateral(address _user, uint256 _amount) external;
+    // function transferCollateral(address _to, uint256 _amount) external;
+    // function absorbLiquidatedCollateral(address _user, uint256 _amount) external;
+    function payOutProfit(address _to , uint256 _amount) external ;
+    function absorbLoss(address _user , uint256 _amount)external ;
 
     // Admin
     function setPositionManager(address _positionManager) external;

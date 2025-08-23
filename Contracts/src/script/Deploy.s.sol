@@ -33,7 +33,7 @@ contract DeployPerpex is Script {
         console.log("PriceFeed deployed:", address(feed));
 
         // 4. Deploy Vault
-        Vault vault = new Vault(address(address(vUSDT)));
+        Vault vault = new Vault(address(vUSDT) , 1000000000000 * 1e18);
         console.log("Vault deployed:", address(vault));
 
         // 5. Deploy vAMM
@@ -58,6 +58,7 @@ contract DeployPerpex is Script {
         vault.setPositionManager(address(manager));
         amm.setPositionManager(address(manager));
         amm.setInitialPrice();
+        vUSDT.mint(address(vault), 1000000000000 * 1e18);
 
         vm.stopBroadcast();
     }
