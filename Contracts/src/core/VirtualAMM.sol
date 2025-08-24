@@ -8,7 +8,7 @@ contract VirtualAMM is Ownable {
     uint256 public vETHreserve; // Virtual ETH reserve
     uint256 public vUSDTreserve; // Virtual USDT reserve
     address public positionManager; // Authorized manager contract
-    uint256 public constant PRECISION = 1e8; // Decimal scaling
+    uint256 public constant PRECISION = 1e18; // Decimal scaling
     IPriceOracle public iPriceOracle;
 
     event ReservesUpdated(uint256 vETHreserve, uint256 vUSDTreserve);
@@ -23,8 +23,8 @@ contract VirtualAMM is Ownable {
         uint256 _vUSDTreserve,
         address _IPriceOracle
     ) Ownable(msg.sender) {
-        vETHreserve = _vETHreserve;
-        vUSDTreserve = _vUSDTreserve;
+        vETHreserve = _vETHreserve * 1e18;
+        vUSDTreserve = _vUSDTreserve * 1e18;
         iPriceOracle = IPriceOracle(_IPriceOracle);
     }
 
@@ -56,7 +56,6 @@ contract VirtualAMM is Ownable {
     function updateReserve(uint256 _amount, bool _isLong) external _onlyPositionManager {
         require(_amount > 0, "invalid amount");
         require(vETHreserve > 0 && vUSDTreserve > 0, "invalid reserves");
-        _amount /= 1e10 ;
 
         uint256 k = vETHreserve * vUSDTreserve;
 

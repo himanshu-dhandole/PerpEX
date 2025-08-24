@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Vault is Ownable {
     // Tracks each user's funds
     struct UserData {
-        uint256 deposited; // Total funds deposited by user
         uint256 locked; // Funds locked in open positions
         uint256 available; // Funds available for withdrawal or trading
     }
@@ -61,7 +60,6 @@ contract Vault is Ownable {
         );
 
         userData[msg.sender].available += _amount;
-        userData[msg.sender].deposited += _amount;
         totalDeposited += _amount;
 
         utilizationRate = totalDeposited == 0
@@ -80,7 +78,6 @@ contract Vault is Ownable {
         );
 
         userData[msg.sender].available -= _amount;
-        userData[msg.sender].deposited -= _amount;
         totalDeposited -= _amount;
 
         utilizationRate = totalDeposited == 0
@@ -108,6 +105,7 @@ contract Vault is Ownable {
         userData[_user].available -= _amount;
         userData[_user].locked += _amount;
         totalLocked += _amount;
+
         utilizationRate = newUtilization;
 
         emit CollateralLocked(_user, _amount);
@@ -161,6 +159,7 @@ contract Vault is Ownable {
         address _to,
         uint256 _amount
     ) external onlyPositionManager {
+        require(_to != address(0), "Invalid user");
         require(_amount > 0, "Amount must be greater than 0");
         require(totalDeposited >= _amount, "Vault lacks funds");
 
@@ -177,6 +176,7 @@ contract Vault is Ownable {
         address _user,
         uint256 _amount
     ) external onlyPositionManager {
+        require(_user != address(0), "Invalid user");
         require(_amount > 0, "Amount must be greater than 0");
         require(
             userData[_user].available >= _amount,

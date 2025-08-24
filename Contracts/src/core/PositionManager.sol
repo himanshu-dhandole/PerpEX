@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../interfaces/IPriceOracle.sol";
 import "../interfaces/IPositionNFT.sol";
 import "../interfaces/IVirtualAMM.sol";
 import "../interfaces/IVault.sol";
@@ -12,7 +11,7 @@ import "../interfaces/IVault.sol";
 contract PositionManager is Ownable, ReentrancyGuard {
     // Constants
     uint256 public constant MAX_LEVERAGE = 50;
-    uint256 public constant TRADING_FEES_BPS = 5; // 0.05%
+    uint256 public constant TRADING_FEES_BPS = 50; // 0.05%
     uint256 public constant LIQUIDATION_THRESHOLD_BPS = 500; // 5%
     uint256 public constant FUNDING_INTERVAL = 8 hours;
 
@@ -26,7 +25,6 @@ contract PositionManager is Ownable, ReentrancyGuard {
     bool public emergencyPause;
 
     // Interfaces
-    IPriceOracle public priceOracle;
     IPositionNFT public positionNFT;
     IVirtualAMM public virtualAMM;
     IVault public vault;
@@ -63,16 +61,13 @@ contract PositionManager is Ownable, ReentrancyGuard {
     }
 
     constructor(
-        address _priceOracle,
         address _positionNFT,
         address _virtualAMM,
         address _vault
     ) Ownable(msg.sender) {
-        priceOracle = IPriceOracle(_priceOracle);
         positionNFT = IPositionNFT(_positionNFT);
         virtualAMM = IVirtualAMM(_virtualAMM);
         vault = IVault(_vault);
-        lastFundingTime = block.timestamp;
     }
 
     function openPosition(
@@ -83,38 +78,35 @@ contract PositionManager is Ownable, ReentrancyGuard {
         if (collateral == 0) revert InsufficientCollateral();
         if (leverage == 0 || leverage > MAX_LEVERAGE) revert InvalidLeverage();
 
+        vault.lockCollateral(msg.sender, collateral);
         uint256 notionalSize = collateral * leverage;
-        uint256 fees = (collateral * TRADING_FEES_BPS) / 10000;
-        if (collateral <= fees) revert InsufficientFunds();
-        uint256 netCollateral = collateral - fees;
 
-        vault.lockCollateral(msg.sender, netCollateral);
-        virtualAMM.updateReserve(notionalSize, isLong);
-
+        
         (uint256 entryPriceByAMM, bool isValid) = virtualAMM.getCurrentPrice();
         require(isValid, "Invalid price");
         uint256 entryPrice = entryPriceByAMM;
-
-        int256 entryFundingRate = virtualAMM.calculateFundingRate();
-
-        if (isLong) {
-            totalLong += notionalSize;
-            totalLongCollateral += netCollateral;
-        } else {
-            totalShort += notionalSize;
-            totalShortCollateral += netCollateral;
-        }
+        int256 entryFundingRate = fundingRateAccumulated;
 
         uint256 tokenId = positionNFT.mintPosition(
             msg.sender,
-            netCollateral,
+            collateral,
             leverage,
             entryPrice,
             entryFundingRate,
             isLong
         );
 
-        emit PositionOpened(tokenId, msg.sender, netCollateral, leverage, entryPrice, isLong);
+        virtualAMM.updateReserve(notionalSize, isLong);
+
+        if (isLong) {
+            totalLong += notionalSize;
+            totalLongCollateral += collateral;
+        } else {
+            totalShort += notionalSize;
+            totalShortCollateral += collateral;
+        }
+
+        emit PositionOpened(tokenId, msg.sender, collateral, leverage, entryPrice, isLong);
     }
 
     function closePosition(uint256 tokenId) external nonReentrant whenNotPaused {
@@ -126,11 +118,11 @@ contract PositionManager is Ownable, ReentrancyGuard {
         require(isValid, "Invalid price");
 
         uint256 notionalSize = pos.collateral * pos.leverage;
-        uint256 fees = (pos.collateral * TRADING_FEES_BPS) / 10000;
+        uint256 fees = (pos.collateral * TRADING_FEES_BPS) / 1e6;
 
         int256 pnl = _calculatePnl(pos.isLong, pos.leverage, pos.collateral, pos.entryPrice, currentPrice);
         int256 fundingPayment = _calculateFundingPayment(pos.isLong, pos.collateral, pos.entryFundingRate);
-        int256 settlementAmount = int256(pos.collateral) + pnl + fundingPayment - int256(fees);
+        int256 settlementAmount =  pnl + fundingPayment - int256(fees);
 
         if (pos.isLong) {
             totalLong -= notionalSize;
@@ -144,19 +136,11 @@ contract PositionManager is Ownable, ReentrancyGuard {
 
         vault.unlockCollateral(msg.sender, pos.collateral);
 
-        if(settlementAmount > int256(pos.collateral)) {
-            uint256 profit = uint(settlementAmount) - pos.collateral;
-            vault.payOutProfit(msg.sender, profit);
+        if(settlementAmount > 0) {
+            vault.payOutProfit(msg.sender, uint256(settlementAmount));
         } else{
-            uint256 loss = pos.collateral - uint(settlementAmount);
-            vault.absorbLoss(msg.sender , loss);
+            vault.absorbLoss(msg.sender , uint256(-settlementAmount));
         }
-
-        // if (settlementAmount > 0) {
-        //     vault.unlockCollateral(msg.sender, uint256(settlementAmount));
-        // } else {
-        //     vault.absorbLiquidatedCollateral(msg.sender, pos.collateral);
-        // }
 
         virtualAMM.updateReserve(notionalSize, !pos.isLong);
 
@@ -239,6 +223,10 @@ contract PositionManager is Ownable, ReentrancyGuard {
         uint256 entryPrice,
         uint256 currentPrice
     ) internal pure returns (int256) {
+        require(entryPrice > 0 && currentPrice > 0, "invalid price");
+        require(leverage > 0, "invalid leverage");
+        require(collateral > 0, "invalid collateral");
+
         int256 priceChangePercentage;
 
         if (isLong) {
@@ -247,8 +235,9 @@ contract PositionManager is Ownable, ReentrancyGuard {
             priceChangePercentage = 1e18 - (int256(currentPrice) * 1e18) / int256(entryPrice);
         }
 
-        int256 pnlPercent = (priceChangePercentage * int256(uint256(leverage))) / 1e18;
-        return (int256(collateral) * pnlPercent) / 1e18;
+        int256 leveragedPercentage = (priceChangePercentage * int256(uint256(leverage))) ;
+        int256 pnl = (int256(collateral) * leveragedPercentage) / 1e18;
+        return pnl;
     }
 
     function _calculateFundingPayment(
