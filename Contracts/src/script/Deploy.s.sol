@@ -38,15 +38,14 @@ contract DeployPerpex is Script {
 
         // 5. Deploy vAMM
         VirtualAMM amm = new VirtualAMM(
-            10000000000,
-            10000000000,
+            1000000,
+            1000000,
             address(feed)
         );
         console.log("vAMM deployed:", address(amm));
 
         // 6. Deploy PositionManager
         PositionManager manager = new PositionManager(
-            address(feed),
             address(nft),
             address(amm),
             address(vault)
