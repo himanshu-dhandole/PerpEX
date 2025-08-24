@@ -3,11 +3,6 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_priceOracle",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
 				"name": "_positionNFT",
 				"type": "address"
 			},
@@ -341,6 +336,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "getCurrentFundingRate",
+		"outputs": [
+			{
+				"internalType": "int256",
+				"name": "currentFundingRate",
+				"type": "int256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "getPositionStats",
 		"outputs": [
 			{
@@ -459,19 +467,6 @@
 		"outputs": [
 			{
 				"internalType": "contract IPositionNFT",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "priceOracle",
-		"outputs": [
-			{
-				"internalType": "contract IPriceOracle",
 				"name": "",
 				"type": "address"
 			}
