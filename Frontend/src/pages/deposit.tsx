@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
 import {
   Wallet,
@@ -20,11 +19,10 @@ import { readContract, writeContract } from "@wagmi/core";
 import { parseUnits, formatUnits } from "viem";
 import { config } from "@/config/wagmiConfig";
 
-
 import VUSDT_ABI from "@/abis/vusdt.json";
 import VAULT_ABI from "@/abis/vault.json";
 import DefaultLayout from "@/layouts/default";
-import {toast, ToastContainer} from "react-toastify"
+import { toast, ToastContainer } from "react-toastify";
 
 const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
 const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
@@ -32,18 +30,15 @@ const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
 export default function VaultPage() {
   const { address } = useAccount();
   const [vusdtBalance, setVusdtBalance] = useState("0");
-  const [ethBalance, setEthBalance] = useState("0");
-  const [totalSupply, setTotalSupply] = useState("0");
+  const [isLoading2, setIsLoading2] = useState(false);
 
   const [vaultData, setVaultData] = useState({
-    deposited: "0.00",
     locked: "0.00",
     available: "0.00",
   });
 
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [minting, setMinting] = useState(false);
   const [loading, setIsLoading] = useState(false);
 
   const loadVaultBalances = async () => {
@@ -51,7 +46,7 @@ export default function VaultPage() {
 
     try {
       setIsLoading(true);
-      
+
       const result = await readContract(config, {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
@@ -60,28 +55,25 @@ export default function VaultPage() {
         account: address,
       });
 
-      const { deposited, locked, available } = result as {
-        deposited: bigint;
+      const {  locked, available } = result as {
         locked: bigint;
         available: bigint;
       };
 
       setVaultData({
-        deposited: formatUnits(deposited, 18),
         locked: formatUnits(locked, 18),
         available: formatUnits(available, 18),
       });
 
       // Load vUSDT balance
-      const balance = await readContract(config, {
+      const balance = (await readContract(config, {
         address: VUSDT_ADDRESS,
         abi: VUSDT_ABI,
         functionName: "balanceOf",
         args: [address],
-      }) as bigint;
+      })) as bigint;
 
       setVusdtBalance(formatUnits(balance, 18));
-
     } catch (error) {
       console.error("Failed to fetch vault balances:", error);
       toast.error("Could not load vault balances.");
@@ -90,100 +82,42 @@ export default function VaultPage() {
     }
   };
 
-  // const handleAirdrop = async () => {
-  //   if (!address) return;
-
-  //   try {
-  //    try{
-  //      const hasClaimed = await readContract(config, {
-  //       address: VUSDT_ADDRESS,
-  //       abi: VUSDT_ABI,
-  //       functionName: "hasClaimed",
-  //       args: [address],
-  //     });
-
-  //       console.log("Airdrop claimed status:", hasClaimed);
-
-  //     if (hasClaimed) {
-  //       toast.error("You already claimed your airdrop.");
-  //       return;
-  //     }
-  //    }catch{
-  //     toast.error("Failed to check airdrop eligibility.");
-  //    }
-
-  //     await writeContract(config, {
-  //       address: VUSDT_ADDRESS,
-  //       abi: VUSDT_ABI,
-  //       functionName: "limitedMint",
-  //       args: [],
-  //     });
-
-  //     toast.success("Airdrop successful!");
-  //     await loadVaultBalances();
-  //   } catch (err) {
-  //     console.error("Airdrop failed:", err);
-  //     toast.error("Airdrop failed. See console for details.");
-  //   }
-  // };
-
-const handleAirdrop = async () => {
-  if (!address) return;
-
-  try {
-    try {
-      const hasClaimed = await readContract(config, {
-        address: VUSDT_ADDRESS,
-        abi: VUSDT_ABI,
-        functionName: "hasClaimed",
-        args: [address],
-      });
-
-      console.log("Airdrop claimed status:", hasClaimed);
-
-      if (hasClaimed) {
-        toast.error("You already claimed your airdrop.");
-        return ;
-      }
-    } catch (err) {
-      console.error("Failed to check airdrop eligibility:", err);
-    }
-
-    await writeContract(config, {
-      address: VUSDT_ADDRESS,
-      abi: VUSDT_ABI,
-      functionName: "limitedMint",
-      args: [],
-    });
-
-    toast.success("Airdrop successful!");
-    await loadVaultBalances();
-  } catch (err) {
-    console.error("Airdrop failed:", err);
-    toast.error("Airdrop failed. See console for details.");
-  }
-};
-
-  const mintTokens = async () => {
+  const handleAirdrop = async () => {
     if (!address) return;
 
     try {
-      setMinting(true);
+      try {
+        const hasClaimed = await readContract(config, {
+          address: VUSDT_ADDRESS,
+          abi: VUSDT_ABI,
+          functionName: "hasClaimed",
+          args: [address],
+        });
+
+        console.log("Airdrop claimed status:", hasClaimed);
+
+        if (hasClaimed) {
+          toast.error("You already claimed your airdrop.");
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to check airdrop eligibility:", err);
+      }
 
       await writeContract(config, {
         address: VUSDT_ADDRESS,
         abi: VUSDT_ABI,
-        functionName: "mint",
-        args: [address, BigInt(1000e18)],
+        functionName: "limitedMint",
+        args: [],
       });
 
-      toast.success("Mint successful!");
+      toast.success("Airdrop successful!");
       await loadVaultBalances();
-    } catch (error) {
-      console.error("Mint failed:", error);
-      toast.error("Mint failed. Are you the owner?");
+    } catch (err) {
+      console.error("Airdrop failed:", err);
+      toast.error("Airdrop failed. See console for details.");
     } finally {
-      setMinting(false);
+      await loadVaultBalances();
     }
   };
 
@@ -208,7 +142,7 @@ const handleAirdrop = async () => {
           address: VUSDT_ADDRESS,
           abi: VUSDT_ABI,
           functionName: "approve",
-          args: [VAULT_ADDRESS, amt], // or max uint256 if you want "infinite" approve
+          args: [VAULT_ADDRESS, amt],
         });
         console.log("Approved", amt.toString());
       }
@@ -235,7 +169,7 @@ const handleAirdrop = async () => {
 
   const handleWithdraw = async () => {
     try {
-      setIsLoading(true);
+      setIsLoading2(true);
       const amt = parseUnits(withdrawAmount, 18);
 
       await writeContract(config, {
@@ -252,7 +186,7 @@ const handleAirdrop = async () => {
       console.error("Withdraw error:", err);
       toast.error("Withdrawal failed");
     } finally {
-      setIsLoading(false);
+      setIsLoading2(false);
       await loadVaultBalances();
     }
   };
@@ -267,7 +201,6 @@ const handleAirdrop = async () => {
     <DefaultLayout>
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto p-6">
-          
           {/* Clean Header */}
           <div className="text-center mb-10">
             <h1 className="text-4xl font-bold text-foreground mb-2">
@@ -280,7 +213,6 @@ const handleAirdrop = async () => {
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            
             {/* Vault Overview */}
             <div className="lg:col-span-2">
               <Card className="h-full">
@@ -291,32 +223,23 @@ const handleAirdrop = async () => {
                   </h2>
                 </CardHeader>
                 <CardBody className="space-y-6">
-                  
                   {/* Balance Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-default-50 rounded-lg">
-                      <div className="text-2xl font-bold text-foreground mb-1">
-                        {parseFloat(vaultData.deposited).toFixed(2)}
-                      </div>
-                      <div className="text-sm text-foreground-600 flex items-center justify-center gap-1">
-                        <TrendingUp size={14} />
-                        Deposited
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
+
                     <div className="text-center p-4 bg-default-50 rounded-lg">
                       <div className="text-2xl font-bold text-foreground mb-1">
-                        {parseFloat(vaultData.locked).toFixed(2)}
+                        $ {parseFloat(vaultData.locked).toFixed(2)}
                       </div>
                       <div className="text-sm text-foreground-600 flex items-center justify-center gap-1">
                         <Lock size={14} />
                         Locked
                       </div>
                     </div>
-                    
+
                     <div className="text-center p-4 bg-default-50 rounded-lg">
                       <div className="text-2xl font-bold text-foreground mb-1">
-                        {parseFloat(vaultData.available).toFixed(2)}
+                        $ {parseFloat(vaultData.available).toFixed(2)}
                       </div>
                       <div className="text-sm text-foreground-600 flex items-center justify-center gap-1">
                         <Coins size={14} />
@@ -331,7 +254,9 @@ const handleAirdrop = async () => {
                   <div className="flex items-center justify-between p-4 bg-violet-50 dark:bg-violet-950/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Wallet size={18} className="text-violet-600" />
-                      <span className="font-medium text-foreground">Wallet Balance</span>
+                      <span className="font-medium text-foreground">
+                        Wallet Balance
+                      </span>
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-violet-600">
@@ -362,16 +287,7 @@ const handleAirdrop = async () => {
                   Claim Airdrop (10k vUSDT)
                 </Button>
 
-                <Button
-                  color="secondary"
-                  onPress={mintTokens}
-                  isLoading={minting}
-                  className="w-full justify-start"
-                  variant="flat"
-                >
-                  <DollarSign size={16} />
-                  Mint 1000 vUSDT
-                </Button>
+             
 
                 <Divider />
 
@@ -389,7 +305,6 @@ const handleAirdrop = async () => {
 
           {/* Transaction Operations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             {/* Deposit */}
             <Card>
               <CardHeader>
@@ -405,7 +320,9 @@ const handleAirdrop = async () => {
                   placeholder="0.00"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  endContent={<span className="text-sm text-foreground-500">vUSDT</span>}
+                  endContent={
+                    <span className="text-sm text-foreground-500">vUSDT</span>
+                  }
                 />
                 <Button
                   color="success"
@@ -435,14 +352,18 @@ const handleAirdrop = async () => {
                   placeholder="0.00"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  endContent={<span className="text-sm text-foreground-500">vUSDT</span>}
+                  endContent={
+                    <span className="text-sm text-foreground-500">vUSDT</span>
+                  }
                 />
                 <Button
                   color="danger"
                   variant="bordered"
                   onPress={handleWithdraw}
                   className="w-full"
-                  isDisabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                  isDisabled={
+                    !withdrawAmount || parseFloat(withdrawAmount) <= 0
+                  }
                 >
                   <ArrowDownCircle size={16} />
                   Withdraw from Vault
@@ -451,18 +372,17 @@ const handleAirdrop = async () => {
             </Card>
           </div>
         </div>
-         <ToastContainer
-                position="bottom-right"
-                autoClose={4000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                draggable
-                theme="dark"
-              />
+        <ToastContainer
+          position="bottom-right"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          draggable
+          theme="dark"
+        />
       </div>
-      
     </DefaultLayout>
   );
 }

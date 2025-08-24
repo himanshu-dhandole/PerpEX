@@ -62,14 +62,13 @@ export default function TradingPage() {
   });
 
   const [vaultData, setVaultData] = useState({
-    deposited: "0.00",
     locked: "0.00",
     available: "0.00",
   });
 
   const [positionData, setPositionData] = useState({
     tokenID: 0,
-    colleteral: 0,
+    collateral: 0,
     leverage: 0,
     entryPrice: 0,
     entryTimestamp: 0,
@@ -82,8 +81,6 @@ export default function TradingPage() {
   // Trading states
   const [baseAmount, setBaseAmount] = useState(0);
   const [leverage, setLeverage] = useState(1);
-  const [position, setPosition] = useState("");
-  const [entryPrice, setEntryPrice] = useState(0);
   const [pnl, setPnl] = useState(0);
 
   const positionSize = baseAmount * leverage;
@@ -98,7 +95,6 @@ export default function TradingPage() {
         abi: VAMM_ABI,
         functionName: "getCurrentPrice",
       })) as any;
-      console.log("Current price response:", res);
       const current = Number(res[0]);
       const isValid = res[1];
 
@@ -107,6 +103,7 @@ export default function TradingPage() {
       }
     } catch (error) {
       console.error("Failed to load current price:", error);
+      toast.error("Failed to load current price.");
     }
   };
 
@@ -120,19 +117,18 @@ export default function TradingPage() {
         account: address,
       });
 
-      const { deposited, locked, available } = result as {
-        deposited: bigint;
+      const {  locked, available } = result as {
         locked: bigint;
         available: bigint;
       };
 
       setVaultData({
-        deposited: formatUnits(deposited, 18),
         locked: formatUnits(locked, 18),
         available: formatUnits(available, 18),
       });
     } catch (error) {
       console.error("Failed to load vault balances:", error);
+      toast.error("Failed to load vault balances.");
     }
   };
 
@@ -148,10 +144,12 @@ export default function TradingPage() {
         functionName: "openPosition",
         args: [collateralInWei, leverage, isLong],
       });
-      loadPositionData();
     } catch (error) {
       console.error("Failed to open position:", error);
       alert("Could not open position.");
+    } finally {
+      toast.success("Position opened !");
+      await loadVaultBalances();
     }
   };
 
@@ -170,7 +168,10 @@ export default function TradingPage() {
       setTokenID(null);
     } catch (error) {
       console.error("Failed to close position:", error);
-      alert("Could not close position.");
+      toast.error("Failed to close position.");
+    } finally {
+      await loadVaultBalances() ;
+      toast.success("Position closed !");
     }
   };
   const loadPositionData = async () => {
@@ -216,7 +217,7 @@ export default function TradingPage() {
       } as any;
 
       setPositionData(mapped);
-      console.log("Mapped position data:", mapped);
+      
     } catch (error) {
       console.error("Failed to load position data:", error);
     }
@@ -232,7 +233,7 @@ export default function TradingPage() {
         args: [],
         account: address,
       })) as any;
-      console.log("Position stats:", stats);
+      
       setStats({
         totalLong: Number(stats[0]),
         totalShort: Number(formatUnits(stats[1], 18)),
@@ -241,13 +242,6 @@ export default function TradingPage() {
         fundingRateAccumulated: Number(formatUnits(stats[4], 18)),
       });
 
-      console.log("Position stats set:", {
-        totalLong: stats[0].toString(),
-        totalShort: stats[1].toString(),
-        totalLongCollateral: stats[2].toString(),
-        totalShortCollateral: stats[3].toString(),
-        fundingRateAccumulated: stats[4].toString(),
-      });
     } catch (error) {
       console.error("Failed to get position stats:", error);
     }
@@ -339,9 +333,9 @@ export default function TradingPage() {
               <CardBody className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-amber-100 text-sm">Total Deposited</p>
+                    <p className="text-amber-100 text-sm">Accumilated Funding Rate</p>
                     <p className="text-2xl font-bold">
-                      ${Number(vaultData.deposited).toFixed(2)}
+                      0.01%
                     </p>
                   </div>
                   <Target className="w-8 h-8 text-amber-200" />
@@ -461,18 +455,51 @@ export default function TradingPage() {
                         </p>
                       </div>
                       <div className="text-center p-3 bg-default-100 rounded-lg">
-                        <p className="text-sm text-foreground-500">Leverage</p>
-                        <p className="font-bold">{leverage}×</p>
-                      </div>
-                      <div className="text-center p-3 bg-success/10 rounded-lg">
-                        <p className="text-sm text-success">PnL</p>
+                        <p className="text-sm text-foreground-500">Holding</p>
                         <p className="font-bold">
-                          {" "}
-                          +$
+                          ${Number(positionData.collateral)} at {leverage}×
+                        </p>
+                      </div>
+                      <div
+                        className={`text-center p-3 rounded-lg ${
+                          (currentPrice / 1e18 - positionData.entryPrice) *
+                            (positionData.isLong ? 1 : -1) >=
+                          0
+                            ? "bg-success/10"
+                            : "bg-danger/10"
+                        }`}
+                      >
+                        <p
+                          className={`text-sm ${
+                            (currentPrice / 1e18 - positionData.entryPrice) *
+                              (positionData.isLong ? 1 : -1) >=
+                            0
+                              ? "text-success"
+                              : "text-danger"
+                          }`}
+                        >
+                          PnL
+                        </p>
+
+                        <p
+                          className={`font-bold ${
+                            (currentPrice / 1e18 - positionData.entryPrice) *
+                              (positionData.isLong ? 1 : -1) >=
+                            0
+                              ? "text-success"
+                              : "text-danger"
+                          }`}
+                        >
+                          {(currentPrice / 1e18 - positionData.entryPrice) *
+                            (positionData.isLong ? 1 : -1) >=
+                          0
+                            ? "+"
+                            : ""}
                           {(
-                            currentPrice / 1e18 -
-                            positionData.entryPrice
+                            (currentPrice / 1e18 - positionData.entryPrice) *
+                            (positionData.isLong ? 1 : -1)
                           ).toFixed(2)}
+                          $
                         </p>
                       </div>
                     </div>
@@ -588,34 +615,16 @@ export default function TradingPage() {
                   </Card>
 
                   {/* Action Buttons */}
-                  {/* {isOpen && (
-                    <Button
-                      color="primary"
-                      size="lg"
-                      onPress={closePosition}
-                      className="w-full h-12"
-                    >
-                      Close Position
-                    </Button>
-                  )} */}
-                  {isOpen ? (
-                    <Button
-                      color="primary"
-                      size="lg"
-                      onPress={closePosition}
-                      className="w-full h-12"
-                    >
-                      Close Position
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      isDisabled
-                      className="w-full h-12 cursor-not-allowed"
-                    >
-                      Close Position
-                    </Button>
-                  )}
+
+                  <Button
+                    color="primary"
+                    size="lg"
+                    onPress={closePosition}
+                    disabled={!isOpen}
+                    className="w-full h-12"
+                  >
+                    Close Position
+                  </Button>
                 </CardBody>
               </Card>
             </div>
