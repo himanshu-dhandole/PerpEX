@@ -34,7 +34,7 @@ import {
 import VAULT_ABI from "@/abis/vault.json";
 import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
 import POSITION_NFT_ABI from "@/abis/positionNFT.json";
-import VAMM_ABI from "@/abis/vamm.json";
+import VAMM_ABI from "@/abis/vAMM.json";
 
 interface VaultData {
   locked: string;
