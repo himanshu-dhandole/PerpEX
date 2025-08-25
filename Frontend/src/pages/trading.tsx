@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
-import { Divider } from "@heroui/divider";
-import { Avatar } from "@heroui/avatar";
 import { Chip } from "@heroui/chip";
 import { Progress } from "@heroui/progress";
 import { Button } from "@heroui/button";
@@ -38,22 +36,45 @@ import POSITION_MANAGER_ABI from "@/abis/positionManager.json";
 import POSITION_NFT_ABI from "@/abis/positionNFT.json";
 import VAMM_ABI from "@/abis/vamm.json";
 
-export default function TradingPage() {
-  const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
-  const POSITION_MANAGER_ADDRESS = import.meta.env
-    .VITE_POSITION_MANAGER_ADDRESS;
-  const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS;
-  const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS;
+interface VaultData {
+  locked: string;
+  available: string;
+}
+
+interface PositionData {
+  tokenID: number;
+  collateral: number;
+  leverage: number;
+  entryPrice: number;
+  entryTimestamp: number;
+  entryFundingRate: number;
+  isLong: boolean;
+  isOpen: boolean;
+  symbol: string;
+}
+
+interface PositionStats {
+  totalLong: number;
+  totalShort: number;
+  totalLongCollateral: number;
+  totalShortCollateral: number;
+  fundingRateAccumulated: number;
+}
+
+export default function TradingPage(): JSX.Element {
+const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS as `0x${string}`;
+const POSITION_MANAGER_ADDRESS = import.meta.env.VITE_POSITION_MANAGER_ADDRESS as `0x${string}`;
+const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS as `0x${string}`;
+const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${string}`;
 
   const { address } = useAccount();
 
-  const [currentPrice, setCurrentPrice] = useState(0);
-  const [priceChange, setPriceChange] = useState(0);
-  const [priceChangePercent, setPriceChangePercent] = useState(0);
-  const [tokenID, setTokenID] = useState(null);
-  const [fundingRate, setFundingRate] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
-  const [stats, setStats] = useState({
+  const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [priceChange, setPriceChange] = useState<number>(0);
+  const [priceChangePercent, setPriceChangePercent] = useState<number>(0);
+  const [tokenID, setTokenID] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [stats, setStats] = useState<PositionStats>({
     totalLong: 0,
     totalShort: 0,
     totalLongCollateral: 0,
@@ -61,12 +82,12 @@ export default function TradingPage() {
     fundingRateAccumulated: 0,
   });
 
-  const [vaultData, setVaultData] = useState({
+  const [vaultData, setVaultData] = useState<VaultData>({
     locked: "0.00",
     available: "0.00",
   });
 
-  const [positionData, setPositionData] = useState({
+  const [positionData, setPositionData] = useState<PositionData>({
     tokenID: 0,
     collateral: 0,
     leverage: 0,
@@ -78,14 +99,11 @@ export default function TradingPage() {
     symbol: "",
   });
 
-  // Trading states
-  const [baseAmount, setBaseAmount] = useState(0);
-  const [leverage, setLeverage] = useState(1);
-  const [pnl, setPnl] = useState(0);
+  const [baseAmount, setBaseAmount] = useState<number>(0);
+  const [leverage, setLeverage] = useState<number>(1);
 
   const positionSize = baseAmount * leverage;
-  const leverageColor =
-    leverage <= 10 ? "success" : leverage <= 50 ? "warning" : "danger";
+  const leverageColor = leverage <= 10 ? "success" : leverage <= 50 ? "warning" : "danger";
 
   const loadCurrentPrice = async () => {
     try {
@@ -94,7 +112,8 @@ export default function TradingPage() {
         address: VAMM_ADDRESS,
         abi: VAMM_ABI,
         functionName: "getCurrentPrice",
-      })) as any;
+      })) as [bigint, boolean];
+
       const current = Number(res[0]);
       const isValid = res[1];
 
@@ -108,23 +127,20 @@ export default function TradingPage() {
   };
 
   const loadVaultBalances = async () => {
+    if (!address) return;
+
     try {
-      const result = await readContract(getPublicClient(config), {
+      const result = (await readContract(getPublicClient(config), {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
         functionName: "getUserCollateral",
         args: [],
         account: address,
-      });
-
-      const {  locked, available } = result as {
-        locked: bigint;
-        available: bigint;
-      };
+      })) as { locked: bigint; available: bigint };
 
       setVaultData({
-        locked: formatUnits(locked, 18),
-        available: formatUnits(available, 18),
+        locked: formatUnits(result.locked, 18),
+        available: formatUnits(result.available, 18),
       });
     } catch (error) {
       console.error("Failed to load vault balances:", error);
@@ -135,47 +151,57 @@ export default function TradingPage() {
   const openPosition = async (isLong: boolean) => {
     if (!address) return;
 
-    const collateralInWei = parseUnits(baseAmount.toString(), 18);
     try {
       const walletClient = await getWalletClient(config);
+      const collateralInWei = parseUnits(baseAmount.toString(), 18);
+
       await writeContract(walletClient, {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "openPosition",
         args: [collateralInWei, leverage, isLong],
       });
+
+      toast.success("Position opened!");
+      await loadVaultBalances();
+      await loadPositionData();
+      await getPositionStats();
     } catch (error) {
       console.error("Failed to open position:", error);
-      alert("Could not open position.");
-    } finally {
-      toast.success("Position opened !");
-      await loadVaultBalances();
+      toast.error("Failed to open position.");
     }
   };
 
   const closePosition = async () => {
-    if (!address) return;
+    if (!address || tokenID === null) return;
+
     toast.info("Closing position...");
     try {
       const walletClient = await getWalletClient(config);
+
       await writeContract(walletClient, {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "closePosition",
         args: [tokenID],
       });
+
       setIsOpen(false);
       setTokenID(null);
+      toast.success("Position closed!");
     } catch (error) {
       console.error("Failed to close position:", error);
       toast.error("Failed to close position.");
     } finally {
-      await loadVaultBalances() ;
-      toast.success("Position closed !");
+      await loadVaultBalances();
+      await loadPositionData();
+      await getPositionStats();
     }
   };
+
   const loadPositionData = async () => {
     if (!address) return;
+
     try {
       const publicClient = getPublicClient(config);
 
@@ -184,7 +210,7 @@ export default function TradingPage() {
         abi: POSITION_NFT_ABI,
         functionName: "getUserOpenPositions",
         args: [address],
-      })) as any;
+      })) as bigint[];
 
       if (!tokenIDs || tokenIDs.length === 0) {
         setIsOpen(false);
@@ -192,7 +218,7 @@ export default function TradingPage() {
         return;
       }
 
-      const tokenID = tokenIDs[0]; // assuming only one open position
+      const tokenID = Number(tokenIDs[0]);
       setTokenID(tokenID);
       setIsOpen(true);
 
@@ -201,10 +227,19 @@ export default function TradingPage() {
         abi: POSITION_NFT_ABI,
         functionName: "getPosition",
         args: [tokenID],
-      })) as any;
+      })) as [
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean,
+        string
+      ];
 
-      // map array into object
-      const mapped = {
+      const mapped: PositionData = {
         tokenID: Number(res[0]),
         collateral: Number(formatUnits(res[1], 18)),
         leverage: Number(res[2]),
@@ -214,10 +249,9 @@ export default function TradingPage() {
         isLong: res[6],
         isOpen: res[7],
         symbol: res[8],
-      } as any;
+      };
 
       setPositionData(mapped);
-      
     } catch (error) {
       console.error("Failed to load position data:", error);
     }
@@ -225,23 +259,23 @@ export default function TradingPage() {
 
   const getPositionStats = async () => {
     if (!address) return;
+
     try {
-      const stats = (await readContract(getPublicClient(config), {
+      const statsRes = (await readContract(getPublicClient(config), {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "getPositionStats",
         args: [],
         account: address,
-      })) as any;
-      
-      setStats({
-        totalLong: Number(stats[0]),
-        totalShort: Number(formatUnits(stats[1], 18)),
-        totalLongCollateral: Number(formatUnits(stats[2], 18)),
-        totalShortCollateral: Number(formatUnits(stats[3], 18)),
-        fundingRateAccumulated: Number(formatUnits(stats[4], 18)),
-      });
+      })) as [bigint, bigint, bigint, bigint, bigint];
 
+      setStats({
+        totalLong: Number(statsRes[0]),
+        totalShort: Number(formatUnits(statsRes[1], 18)),
+        totalLongCollateral: Number(formatUnits(statsRes[2], 18)),
+        totalShortCollateral: Number(formatUnits(statsRes[3], 18)),
+        fundingRateAccumulated: Number(formatUnits(statsRes[4], 18)),
+      });
     } catch (error) {
       console.error("Failed to get position stats:", error);
     }
@@ -457,7 +491,7 @@ export default function TradingPage() {
                       <div className="text-center p-3 bg-default-100 rounded-lg">
                         <p className="text-sm text-foreground-500">Holding</p>
                         <p className="font-bold">
-                          ${Number(positionData.collateral)} at {leverage}×
+                          ${Number(positionData.collateral)} at {positionData.leverage}×
                         </p>
                       </div>
                       <div

@@ -12,7 +12,6 @@ import {
   Lock,
   Coins,
   Shield,
-  DollarSign,
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { readContract, writeContract } from "@wagmi/core";
@@ -24,84 +23,73 @@ import VAULT_ABI from "@/abis/vault.json";
 import DefaultLayout from "@/layouts/default";
 import { toast, ToastContainer } from "react-toastify";
 
-const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS;
-const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS;
+const VUSDT_ADDRESS = import.meta.env.VITE_VUSDT_ADDRESS as `0x${string}`;
+const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS as `0x${string}`;
+
+interface VaultData {
+  locked: string;
+  available: string;
+}
 
 export default function VaultPage() {
   const { address } = useAccount();
-  const [vusdtBalance, setVusdtBalance] = useState("0");
-  const [isLoading2, setIsLoading2] = useState(false);
-
-  const [vaultData, setVaultData] = useState({
+  const [vusdtBalance, setVusdtBalance] = useState<string>("0");
+  const [vaultData, setVaultData] = useState<VaultData>({
     locked: "0.00",
     available: "0.00",
   });
-
-  const [depositAmount, setDepositAmount] = useState("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [loading, setIsLoading] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<string>("");
+  const [withdrawAmount, setWithdrawAmount] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [loadingWithdraw, setLoadingWithdraw] = useState(false);
 
   const loadVaultBalances = async () => {
     if (!address) return;
-
     try {
-      setIsLoading(true);
+      setLoading(true);
 
-      const result = await readContract(config, {
+      const vaultResult = await readContract(config, {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
         functionName: "getUserCollateral",
         args: [],
         account: address,
-      });
-
-      const {  locked, available } = result as {
-        locked: bigint;
-        available: bigint;
-      };
+      }) as { locked: bigint; available: bigint };
 
       setVaultData({
-        locked: formatUnits(locked, 18),
-        available: formatUnits(available, 18),
+        locked: formatUnits(vaultResult.locked, 18),
+        available: formatUnits(vaultResult.available, 18),
       });
 
-      // Load vUSDT balance
-      const balance = (await readContract(config, {
+      const balance = await readContract(config, {
         address: VUSDT_ADDRESS,
         abi: VUSDT_ABI,
         functionName: "balanceOf",
         args: [address],
-      })) as bigint;
+      }) as bigint;
 
       setVusdtBalance(formatUnits(balance, 18));
-    } catch (error) {
-      console.error("Failed to fetch vault balances:", error);
-      toast.error("Could not load vault balances.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load vault balances.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleAirdrop = async () => {
     if (!address) return;
-
     try {
-      try {
-        const hasClaimed = await readContract(config, {
-          address: VUSDT_ADDRESS,
-          abi: VUSDT_ABI,
-          functionName: "hasClaimed",
-          args: [address],
-        });
+      const hasClaimed = await readContract(config, {
+        address: VUSDT_ADDRESS,
+        abi: VUSDT_ABI,
+        functionName: "hasClaimed",
+        args: [address],
+      }) as boolean;
 
-        console.log("Airdrop claimed status:", hasClaimed);
-
-        if (hasClaimed) {
-          toast.error("You already claimed your airdrop.");
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to check airdrop eligibility:", err);
+      if (hasClaimed) {
+        toast.error("You already claimed your airdrop.");
+        return;
       }
 
       await writeContract(config, {
@@ -114,40 +102,33 @@ export default function VaultPage() {
       toast.success("Airdrop successful!");
       await loadVaultBalances();
     } catch (err) {
-      console.error("Airdrop failed:", err);
-      toast.error("Airdrop failed. See console for details.");
-    } finally {
-      await loadVaultBalances();
+      console.error(err);
+      toast.error("Airdrop failed.");
     }
   };
 
   const handleDeposit = async () => {
+    if (!address || !depositAmount) return;
     try {
-      setIsLoading(true);
+      setLoading(true);
       const amt = parseUnits(depositAmount, 18);
 
-      // 1. Check allowance
-      const allowance = (await readContract(config, {
+      const allowance = await readContract(config, {
         address: VUSDT_ADDRESS,
         abi: VUSDT_ABI,
         functionName: "allowance",
         args: [address, VAULT_ADDRESS],
-      })) as any;
+      }) as bigint;
 
-      console.log("Current allowance:", allowance.toString());
-
-      // 2. Approve if needed
-      if ((allowance as any) < amt) {
+      if (allowance < amt) {
         await writeContract(config, {
           address: VUSDT_ADDRESS,
           abi: VUSDT_ABI,
           functionName: "approve",
           args: [VAULT_ADDRESS, amt],
         });
-        console.log("Approved", amt.toString());
       }
 
-      // 3. Deposit
       await writeContract(config, {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
@@ -159,17 +140,17 @@ export default function VaultPage() {
       setDepositAmount("");
       await loadVaultBalances();
     } catch (err) {
-      console.error("Deposit error:", err);
-      toast.error("Deposit failed");
+      console.error(err);
+      toast.error("Deposit failed.");
     } finally {
-      setIsLoading(false);
-      await loadVaultBalances();
+      setLoading(false);
     }
   };
 
   const handleWithdraw = async () => {
+    if (!address || !withdrawAmount) return;
     try {
-      setIsLoading2(true);
+      setLoadingWithdraw(true);
       const amt = parseUnits(withdrawAmount, 18);
 
       await writeContract(config, {
@@ -183,25 +164,22 @@ export default function VaultPage() {
       setWithdrawAmount("");
       await loadVaultBalances();
     } catch (err) {
-      console.error("Withdraw error:", err);
-      toast.error("Withdrawal failed");
+      console.error(err);
+      toast.error("Withdrawal failed.");
     } finally {
-      setIsLoading2(false);
-      await loadVaultBalances();
+      setLoadingWithdraw(false);
     }
   };
 
   useEffect(() => {
-    if (address) {
-      loadVaultBalances();
-    }
+    if (address) loadVaultBalances();
   }, [address]);
 
   return (
     <DefaultLayout>
       <div className="min-h-screen bg-background">
         <div className="max-w-6xl mx-auto p-6">
-          {/* Clean Header */}
+          {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-4xl font-bold text-foreground mb-2">
               Vault Dashboard
@@ -211,7 +189,6 @@ export default function VaultPage() {
             </p>
           </div>
 
-          {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Vault Overview */}
             <div className="lg:col-span-2">
@@ -223,40 +200,31 @@ export default function VaultPage() {
                   </h2>
                 </CardHeader>
                 <CardBody className="space-y-6">
-                  {/* Balance Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-
                     <div className="text-center p-4 bg-default-50 rounded-lg">
                       <div className="text-2xl font-bold text-foreground mb-1">
                         $ {parseFloat(vaultData.locked).toFixed(2)}
                       </div>
                       <div className="text-sm text-foreground-600 flex items-center justify-center gap-1">
-                        <Lock size={14} />
-                        Locked
+                        <Lock size={14} /> Locked
                       </div>
                     </div>
-
                     <div className="text-center p-4 bg-default-50 rounded-lg">
                       <div className="text-2xl font-bold text-foreground mb-1">
                         $ {parseFloat(vaultData.available).toFixed(2)}
                       </div>
                       <div className="text-sm text-foreground-600 flex items-center justify-center gap-1">
-                        <Coins size={14} />
-                        Available
+                        <Coins size={14} /> Available
                       </div>
                     </div>
                   </div>
 
                   <Divider />
 
-                  {/* Wallet Balance */}
                   <div className="flex items-center justify-between p-4 bg-violet-50 dark:bg-violet-950/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Wallet size={18} className="text-violet-600" />
-                      <span className="font-medium text-foreground">
-                        Wallet Balance
-                      </span>
+                      <span className="font-medium text-foreground">Wallet Balance</span>
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-violet-600">
@@ -283,11 +251,8 @@ export default function VaultPage() {
                   className="w-full justify-start"
                   variant="flat"
                 >
-                  <Gift size={16} />
-                  Claim Airdrop (10k vUSDT)
+                  <Gift size={16} /> Claim Airdrop (10k vUSDT)
                 </Button>
-
-             
 
                 <Divider />
 
@@ -303,7 +268,6 @@ export default function VaultPage() {
             </Card>
           </div>
 
-          {/* Transaction Operations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Deposit */}
             <Card>
@@ -320,9 +284,7 @@ export default function VaultPage() {
                   placeholder="0.00"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  endContent={
-                    <span className="text-sm text-foreground-500">vUSDT</span>
-                  }
+                  endContent={<span className="text-sm text-foreground-500">vUSDT</span>}
                 />
                 <Button
                   color="success"
@@ -331,8 +293,7 @@ export default function VaultPage() {
                   isLoading={loading}
                   isDisabled={!depositAmount || parseFloat(depositAmount) <= 0}
                 >
-                  <ArrowUpCircle size={16} />
-                  Deposit to Vault
+                  <ArrowUpCircle size={16} /> Deposit to Vault
                 </Button>
               </CardBody>
             </Card>
@@ -352,26 +313,23 @@ export default function VaultPage() {
                   placeholder="0.00"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  endContent={
-                    <span className="text-sm text-foreground-500">vUSDT</span>
-                  }
+                  endContent={<span className="text-sm text-foreground-500">vUSDT</span>}
                 />
                 <Button
                   color="danger"
                   variant="bordered"
                   onPress={handleWithdraw}
                   className="w-full"
-                  isDisabled={
-                    !withdrawAmount || parseFloat(withdrawAmount) <= 0
-                  }
+                  isLoading={loadingWithdraw}
+                  isDisabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
                 >
-                  <ArrowDownCircle size={16} />
-                  Withdraw from Vault
+                  <ArrowDownCircle size={16} /> Withdraw from Vault
                 </Button>
               </CardBody>
             </Card>
           </div>
         </div>
+
         <ToastContainer
           position="bottom-right"
           autoClose={4000}
