@@ -1,3 +1,4 @@
+
 import { title } from "@/components/primitives";
 import DefaultLayout from "@/layouts/default";
 import { useState } from "react";
@@ -29,7 +30,6 @@ export default function DocsPage() {
   const [balance, setBalance] = useState(0);
   const [minting, setMinting] = useState(false);
   const [vaultData, setVaultData] = useState({
-    deposited: "0.00",
     locked: "0.00",
     available: "0.00",
   });
@@ -72,14 +72,12 @@ export default function DocsPage() {
       console.log("Vault getUserCollateral result:", result);
 
       // Destructure if it's an object
-      const { deposited, locked, available } = result as {
-        deposited: bigint;
+      const { locked, available } = result as {
         locked: bigint;
         available: bigint;
       };
 
       setVaultData({
-        deposited: formatUnits(deposited, 18),
         locked: formatUnits(locked, 18),
         available: formatUnits(available, 18),
       });
@@ -270,9 +268,7 @@ export default function DocsPage() {
           </h2>
 
           <div className="mt-4 text-left text-sm">
-            <p>
-              <strong>Deposited:</strong> {vaultData.deposited} vUSDT
-            </p>
+          
             <p>
               <strong>Locked:</strong> {vaultData.locked} vUSDT
             </p>
@@ -327,4 +323,4 @@ export default function DocsPage() {
 
     </DefaultLayout>
   );
-}
+}}
