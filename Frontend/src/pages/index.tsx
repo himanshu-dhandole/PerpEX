@@ -1,33 +1,17 @@
-import { Link } from "@heroui/link";
-import { Snippet } from "@heroui/snippet";
-import { Code } from "@heroui/code";
-import { button as buttonStyles } from "@heroui/theme";
-import { Card, CardBody, CardHeader } from "@heroui/card";
-import { Chip } from "@heroui/chip";
 
-
-import { siteConfig } from "@/config/site";
 import { title, subtitle } from "@/components/primitives";
 import {
-  TrendingUp,
   Zap,
-  Target,
   Shield,
-  BarChart3,
-  Wallet,
   LockKeyhole,
   LineChart,
   Coins,
-  ArrowRight,
 } from "lucide-react";
 import DefaultLayout from "@/layouts/default";
-import { WavyBackground } from "@/components/ui/wavy-background";
-import { Hero } from "@/components/ui/animated-hero";
-import { Button } from "@heroui/button";
-import { motion } from "framer-motion";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { cn } from "@/lib/utils";
-import { AuroraBackground } from "@/components/ui/aurora-background";
+import { StaggerTestimonials } from "@/components/stagger-testimonials";
+import { HeroSection } from "@/components/hero-section-1";
 
 // Reusable feature card
 const Feature = ({
@@ -58,7 +42,6 @@ const Stat = ({ value, label }: { value: string; label: string }) => (
   </div>
 );
 
-
 interface GridItemProps {
   area: string;
   icon: React.ReactNode;
@@ -66,56 +49,58 @@ interface GridItemProps {
   description: React.ReactNode;
 }
 
-const GridItem = ({ area, icon, title, description }: GridItemProps) => {
-  return (
-    <li className={cn("min-h-[14rem] list-none", area)}>
-      <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
-        <GlowingEffect
-          spread={40}
-          glow={true}
-          disabled={false}
-          proximity={64}
-          inactiveZone={0.01}
-          borderWidth={3}
-        />
-        <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6">
-          <div className="relative flex flex-1 flex-col justify-between gap-3">
-            <div className="w-fit rounded-lg border-[0.75px] border-border bg-muted p-2 dark:bg-slate-800 dark:border-slate-700">
-              {icon}
-            </div>
-            <div className="space-y-3">
-              <h3 className="pt-0.5 text-xl leading-[1.375rem] font-semibold font-sans tracking-[-0.04em] md:text-2xl md:leading-[1.875rem] text-balance text-foreground">
-                {title}
-              </h3>
-              <p className="font-sans text-sm leading-[1.125rem] md:text-base md:leading-[1.375rem] text-muted-foreground dark:text-slate-300">
-                {description}
-              </p>
-            </div>
+const GridItem = ({ area, icon, title, description }: GridItemProps) => (
+  <li className={cn("min-h-[14rem] list-none", area)}>
+    <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
+      <GlowingEffect
+        spread={40}
+        glow={true}
+        disabled={false}
+        proximity={64}
+        inactiveZone={0.01}
+        borderWidth={3}
+      />
+      <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] bg-black/20 backdrop-blur-sm p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6">
+        <div className="relative flex flex-1 flex-col justify-between gap-3">
+          <div className="w-fit rounded-lg border-[0.75px] border-border bg-muted/20 p-2 dark:bg-slate-800/20 dark:border-slate-700/20">
+            {icon}
+          </div>
+          <div className="space-y-3">
+            <h3 className="pt-0.5 text-xl leading-[1.375rem] font-semibold font-sans tracking-[-0.04em] md:text-2xl md:leading-[1.875rem] text-foreground">
+              {title}
+            </h3>
+            <p className="font-sans text-sm leading-[1.125rem] md:text-base md:leading-[1.375rem] text-muted-foreground dark:text-slate-300">
+              {description}
+            </p>
           </div>
         </div>
       </div>
-    </li>
-  );
-};
+    </div>
+  </li>
+);
 
 
 export default function IndexPage() {
   return (
     <DefaultLayout>
       {/* Hero Section with Wavy Background */}
-      
-      <WavyBackground className="max-w-4xl mx-auto pb-20 ">
-        <Hero />
-      </WavyBackground>
+
+      {/* <AuroraBackground className="-mt-16 h-screen dark:bg-black relative overflow-hidden"> 
+    <Hero></Hero>
+    
+       </AuroraBackground> */}
+<div>
+  <HeroSection></HeroSection>
+</div>
 
       {/* Main Content */}
-      <div className="flex flex-col gap-32 pb-32 px-4">
+      <div className="bg-background flex flex-col gap-32 pb-32 px-4">
         {/* Value Proposition */}
         <section className="container mx-auto text-center max-w-4xl">
           <h2 className={title()}>Why Traders Choose Us</h2>
           <p
             className={subtitle({
-              class: "mt-6 text-gray-400 max-w-2xl mx-auto",
+              class: "mt-6 text-muted-foreground max-w-2xl mx-auto",
             })}
           >
             Built for speed, security, and scalability — our next-gen perpetual
@@ -124,81 +109,52 @@ export default function IndexPage() {
           </p>
         </section>
 
-      
-      {/* === STATS SECTION === */}
-      <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <Stat value="50x" label="Max Leverage" />
-          <Stat value="$2.4B+" label="Total Volume" />
-          <Stat value="0.05%" label="Taker Fee" />
-          <Stat value="24/7" label="Global Markets" />
-        </div>
-      </div>
+        {/* === FEATURES GRID === */}
+        <ul className="container text-muted-foreground mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-3 lg:gap-8 xl:max-h-[36rem] xl:grid-rows-2">
+          <GridItem
+            area="md:[grid-area:1/1/2/7] xl:[grid-area:1/1/2/5]"
+            icon={<Zap className="h-5 w-5 text-yellow-400" />}
+            title="Lightning-Fast Execution"
+            description="Sub-200ms order matching powered by Layer 3 rollups and JIT liquidity."
+          />
+          <GridItem
+            area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
+            icon={<Shield className="h-5 w-5 text-sky-400" />}
+            title="Decentralized Insurance Pool"
+            description="Backstop fund protects traders during black swan events and undercollateralization."
+          />
+          <GridItem
+            area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
+            icon={<LockKeyhole className="h-5 w-5 text-emerald-400" />}
+            title="Non-Custodial & Audited"
+            description="Open-source contracts, audited by Spearbit and PeckShield. Your keys, your coins."
+          />
+          <GridItem
+            area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
+            icon={<LineChart className="h-5 w-5 text-pink-400" />}
+            title="Real-Time PnL Tracking"
+            description="In-wallet analytics show live profit/loss, funding costs, and liquidation price."
+          />
+          <GridItem
+            area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
+            icon={<Coins className="h-5 w-5 text-indigo-400" />}
+            title="Cross-Margin Efficiency"
+            description="One wallet, multiple positions. Maximize capital efficiency with shared margin."
+          />
+        </ul>
 
-      {/* === FEATURES GRID === */}
-      <ul className="container mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-3 lg:gap-8 xl:max-h-[36rem] xl:grid-rows-2">
-        <GridItem
-          area="md:[grid-area:1/1/2/7] xl:[grid-area:1/1/2/5]"
-          icon={<Zap className="h-4 w-4 text-primary" />}
-          title="Lightning-Fast Execution"
-          description="Sub-200ms order matching powered by Layer 3 rollups and JIT liquidity."
-        />
-        <GridItem
-          area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
-          icon={<Shield className="h-4 w-4 text-primary" />}
-          title="Decentralized Insurance Pool"
-          description="Backstop fund protects traders during black swan events and undercollateralization."
-        />
-        <GridItem
-          area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
-          icon={<LockKeyhole className="h-4 w-4 text-primary" />}
-          title="Non-Custodial & Audited"
-          description="Open-source contracts, audited by Spearbit and PeckShield. Your keys, your coins."
-        />
-        <GridItem
-          area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
-          icon={<LineChart className="h-4 w-4 text-primary" />}
-          title="Real-Time PnL Tracking"
-          description="In-wallet analytics show live profit/loss, funding costs, and liquidation price."
-        />
-        <GridItem
-          area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
-          icon={<Coins className="h-4 w-4 text-primary" />}
-          title="Cross-Margin Efficiency"
-          description="One wallet, multiple positions. Maximize capital efficiency with shared margin."
-        />
-      </ul>
-
-      {/* === CTA SECTION === */}
-      <div className="container mx-auto px-4 py-24 sm:px-6 lg:px-8 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl mx-auto"
-        >
-          <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6">
-            Ready to Trade the Future?
+        {/* === Testimonials === */}
+        <div className="flex flex-col items-center gap-4 px-4 sm:gap-8">
+          <h2 className="max-w-[720px] text-center text-3xl font-semibold leading-tight sm:text-5xl sm:leading-tight">
+            Trusted by Traders worldwide
           </h2>
-          <p className="text-lg text-slate-300 mb-8">
-            Join 85,000+ traders on the fastest-growing perpetual DEX.
+          <p className="text-md max-w-[600px] text-center font-medium text-muted-foreground sm:text-xl">
+            Perpex is redefining perpetual trading with unmatched speed, transparency, and security. Our platform empowers traders to execute strategies confidently, leveraging advanced risk controls and real-time analytics—all on a fully decentralized, non-custodial exchange.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-primary to-primary/80 text-white gap-2 px-8"
-            >
-              Start Trading <ArrowRight className="w-4 h-4" />
-            </Button>
-            <Button
-              size="lg"
-              className="text-white border-white/30 hover:bg-white/10"
-            >
-              View Docs
-            </Button>
-          </div>
-        </motion.div>
-      </div>
+        </div>
+        <div className="flex w-full h-[500px] justify-center items-center">
+          <StaggerTestimonials />
+        </div>
       </div>
     </DefaultLayout>
   );

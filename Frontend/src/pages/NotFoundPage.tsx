@@ -12,7 +12,7 @@ const NotFoundPage: React.FC = () => (
         <motion.img
           src="https://media.giphy.com/media/QBd2kLB5qDmysEXre9/giphy.gif"
           alt="Not Found"
-          className="w-64 mx-auto rounded-lg shadow-lg border border-gray-800"
+          className="w-[800px] mx-auto rounded-lg shadow-lg border border-gray-800"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}

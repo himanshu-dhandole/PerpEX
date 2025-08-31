@@ -8,7 +8,11 @@ import { Slider } from "@heroui/slider";
 
 import DefaultLayout from "@/layouts/default";
 import { config } from "@/config/wagmiConfig";
-import { getPublicClient, getWalletClient } from "wagmi/actions";
+import {
+  getPublicClient,
+  getWalletClient,
+  waitForTransactionReceipt,
+} from "wagmi/actions";
 import { readContract, writeContract } from "viem/actions";
 import { formatUnits, parseUnits } from "viem";
 import { useAccount } from "wagmi";
@@ -62,10 +66,12 @@ interface PositionStats {
 }
 
 export default function TradingPage(): JSX.Element {
-const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS as `0x${string}`;
-const POSITION_MANAGER_ADDRESS = import.meta.env.VITE_POSITION_MANAGER_ADDRESS as `0x${string}`;
-const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS as `0x${string}`;
-const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${string}`;
+  const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS as `0x${string}`;
+  const POSITION_MANAGER_ADDRESS = import.meta.env
+    .VITE_POSITION_MANAGER_ADDRESS as `0x${string}`;
+  const VAMM_ADDRESS = import.meta.env.VITE_VAMM_ADDRESS as `0x${string}`;
+  const POSITION_NFT_ADDRESS = import.meta.env
+    .VITE_POSITION_NFT_ADDRESS as `0x${string}`;
 
   const { address } = useAccount();
 
@@ -103,7 +109,8 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
   const [leverage, setLeverage] = useState<number>(1);
 
   const positionSize = baseAmount * leverage;
-  const leverageColor = leverage <= 10 ? "success" : leverage <= 50 ? "warning" : "danger";
+  const leverageColor =
+    leverage <= 10 ? "success" : leverage <= 50 ? "warning" : "danger";
 
   const loadCurrentPrice = async () => {
     try {
@@ -155,17 +162,27 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
       const walletClient = await getWalletClient(config);
       const collateralInWei = parseUnits(baseAmount.toString(), 18);
 
-      await writeContract(walletClient, {
+      // transaction in tx
+      const tx = await writeContract(walletClient, {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "openPosition",
         args: [collateralInWei, leverage, isLong],
       });
 
-      toast.success("Position opened!");
-      await loadVaultBalances();
-      await loadPositionData();
-      await getPositionStats();
+      toast.info("please wait for confirmation");
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status == "success") {
+        toast.success("Position opened!");
+        await Promise.all([
+          loadVaultBalances(),
+          loadPositionData(),
+          getPositionStats(),
+        ]);
+      } else {
+        toast.error("Transaction failed.");
+      }
     } catch (error) {
       console.error("Failed to open position:", error);
       toast.error("Failed to open position.");
@@ -175,27 +192,36 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
   const closePosition = async () => {
     if (!address || tokenID === null) return;
 
-    toast.info("Closing position...");
     try {
       const walletClient = await getWalletClient(config);
 
-      await writeContract(walletClient, {
+      const tx = await writeContract(walletClient, {
         address: POSITION_MANAGER_ADDRESS,
         abi: POSITION_MANAGER_ABI,
         functionName: "closePosition",
         args: [tokenID],
       });
+      toast.info("please wait for confirmation");
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
 
-      setIsOpen(false);
-      setTokenID(null);
-      toast.success("Position closed!");
+      if (receipt.status == "success") {
+        setIsOpen(false);
+        setTokenID(null);
+        setPositionData((prev) => ({ ...prev, isOpen: false }));
+        setTimeout(async () => {
+          await Promise.all([
+            loadVaultBalances(),
+            loadPositionData(),
+            getPositionStats(),
+          ]);
+        }, 1500);
+        toast.success("Position closed!");
+      } else {
+        toast.error("Transaction failed.");
+      }
     } catch (error) {
       console.error("Failed to close position:", error);
       toast.error("Failed to close position.");
-    } finally {
-      await loadVaultBalances();
-      await loadPositionData();
-      await getPositionStats();
     }
   };
 
@@ -236,7 +262,7 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
         bigint,
         boolean,
         boolean,
-        string
+        string,
       ];
 
       const mapped: PositionData = {
@@ -367,10 +393,10 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
               <CardBody className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-amber-100 text-sm">Accumilated Funding Rate</p>
-                    <p className="text-2xl font-bold">
-                      0.01%
+                    <p className="text-amber-100 text-sm">
+                      Accumilated Funding Rate
                     </p>
+                    <p className="text-2xl font-bold">0.01%</p>
                   </div>
                   <Target className="w-8 h-8 text-amber-200" />
                 </div>
@@ -455,13 +481,6 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                   <CardBody className="flex flex-col h-[400px]">
                     {Chart}
                   </CardBody>
-
-                  <Progress
-                    value={Math.abs(priceChangePercent) * 10}
-                    color={priceChange >= 0 ? "success" : "danger"}
-                    className="max-w-full"
-                    size="sm"
-                  />
                 </CardBody>
               </Card>
 
@@ -491,7 +510,8 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                       <div className="text-center p-3 bg-default-100 rounded-lg">
                         <p className="text-sm text-foreground-500">Holding</p>
                         <p className="font-bold">
-                          ${Number(positionData.collateral)} at {positionData.leverage}×
+                          ${Number(positionData.collateral)} at{" "}
+                          {positionData.leverage}×
                         </p>
                       </div>
                       <div
@@ -505,7 +525,7 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                       >
                         <p
                           className={`text-sm ${
-                            ((currentPrice / 1e18 - positionData.entryPrice)) *
+                            (currentPrice / 1e18 - positionData.entryPrice) *
                               (positionData.isLong ? 1 : -1) >=
                             0
                               ? "text-success"
@@ -524,13 +544,13 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                               : "text-danger"
                           }`}
                         >
-                          {((currentPrice / 1e18 - positionData.entryPrice) * positionData.leverage) *
+                          {(currentPrice / 1e18 - positionData.entryPrice) *
                             (positionData.isLong ? 1 : -1) >=
                           0
                             ? "+"
                             : ""}
                           {(
-                            ((currentPrice / 1e18 - positionData.entryPrice) * positionData.leverage) *
+                            (currentPrice / 1e18 - positionData.entryPrice) *
                             (positionData.isLong ? 1 : -1)
                           ).toFixed(2)}
                           $

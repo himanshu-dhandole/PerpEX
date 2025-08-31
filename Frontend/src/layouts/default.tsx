@@ -1,38 +1,10 @@
-// import { Link } from "@heroui/link";
-
-// import { Navbar } from "@/components/navbar";
-
-// export default function DefaultLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <div className="relative flex flex-col h-screen">
-//       <Navbar />
-//       <main className="container mx-auto max-w-7xl px-6 flex-grow">
-//         {children}
-//       </main>
-//       <footer className="w-full flex items-center justify-center py-3">
-//         <Link
-//           isExternal
-//           className="flex items-center gap-1 text-current"
-//           href="https://heroui.com"
-//           title="heroui.com homepage"
-//         >
-//           <span className="text-default-600">Powered by</span>
-//           <p className="text-primary">HeroUI</p>
-//         </Link>
-//       </footer>
-//     </div>
-//   );
-// }
 import { Link } from "@heroui/link";
 
 import { Navbar } from "@/components/navbar";
 import { Card, CardBody } from "@heroui/card";
 import { Code, ExternalLink, Github, Twitter } from "lucide-react";
 import { DiscordIcon, GithubIcon, LinkedInIcon } from "@/components/icons";
+import { Footerdemo } from "@/components/ui/footer-section";
 
 export default function DefaultLayout({
   children,
@@ -43,10 +15,9 @@ export default function DefaultLayout({
     <div className="relative flex flex-col h-screen">
       <Navbar />
       <main className="w-full flex-grow">{children}</main>
-      <footer className="bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 border-t border-gray-200 dark:border-gray-800 transition-colors duration-200">
+      {/* <footer className="bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 border-t border-gray-200 dark:border-gray-800 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Brand Column */}
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 dark:from-blue-500 dark:to-purple-600 rounded-lg flex items-center justify-center mr-3">
@@ -79,7 +50,6 @@ export default function DefaultLayout({
               </div>
             </div>
 
-            {/* Links */}
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-4 text-sm uppercase tracking-wider">
                 Contact Me :)
@@ -102,7 +72,6 @@ export default function DefaultLayout({
               </div>
             </div>
 
-            {/* Developer */}
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-4 text-sm uppercase tracking-wider">
                 Developer
@@ -144,7 +113,6 @@ export default function DefaultLayout({
             </div>
           </div>
 
-          {/* Bottom Bar */}
           <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 text-sm">
               © 2025 PerpEX. All rights reserved.
@@ -172,7 +140,6 @@ export default function DefaultLayout({
             </div>
           </div>
 
-          {/* Info Banner */}
           <div className="mt-8">
             <Card className="border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
               <CardBody className="p-4">
@@ -201,7 +168,8 @@ export default function DefaultLayout({
             </Card>
           </div>
         </div>
-      </footer>
+      </footer> */}
+      <Footerdemo></Footerdemo>
     </div>
   );
 }
