@@ -11,6 +11,8 @@ import PricingPage from "@/pages/pricing";
 import Deposit from "@/pages/deposit";
 import AboutPage from "@/pages/about";
 import TradingPlatform from "@/pages/trading";
+import NotFoundPage from "./pages/NotFoundPage.tsx";
+import Dummy from "./pages/dummy.tsx";
 
 // Query client instance
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ function App() {
                     <Route element={<Deposit/>} path="/deposit"/>
                     <Route element={<AboutPage/>} path="/about"/>
                     <Route element={<TradingPlatform/>} path="/trading"/>
+                    <Route element={<NotFoundPage/>} path="*"/>
+                    <Route element={<Dummy/>} path="/dummy"/>
                 </Routes>
             </QueryClientProvider>
         </WagmiProvider>
