@@ -89,7 +89,7 @@ export default function IndexPage() {
     <Hero></Hero>
     
        </AuroraBackground> */}
-<div>
+<div className="bg-background -mt-18">
   <HeroSection></HeroSection>
 </div>
 
