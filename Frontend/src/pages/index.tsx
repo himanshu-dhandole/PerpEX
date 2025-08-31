@@ -4,7 +4,7 @@ import { Code } from "@heroui/code";
 import { button as buttonStyles } from "@heroui/theme";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
-import { Hero } from "@/components/ui/animated-hero";
+
 
 import { siteConfig } from "@/config/site";
 import { title, subtitle } from "@/components/primitives";
@@ -15,9 +15,19 @@ import {
   Shield,
   BarChart3,
   Wallet,
+  LockKeyhole,
+  LineChart,
+  Coins,
+  ArrowRight,
 } from "lucide-react";
 import DefaultLayout from "@/layouts/default";
 import { WavyBackground } from "@/components/ui/wavy-background";
+import { Hero } from "@/components/ui/animated-hero";
+import { Button } from "@heroui/button";
+import { motion } from "framer-motion";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { cn } from "@/lib/utils";
+import { AuroraBackground } from "@/components/ui/aurora-background";
 
 // Reusable feature card
 const Feature = ({
@@ -48,10 +58,52 @@ const Stat = ({ value, label }: { value: string; label: string }) => (
   </div>
 );
 
+
+interface GridItemProps {
+  area: string;
+  icon: React.ReactNode;
+  title: string;
+  description: React.ReactNode;
+}
+
+const GridItem = ({ area, icon, title, description }: GridItemProps) => {
+  return (
+    <li className={cn("min-h-[14rem] list-none", area)}>
+      <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2 md:rounded-[1.5rem] md:p-3">
+        <GlowingEffect
+          spread={40}
+          glow={true}
+          disabled={false}
+          proximity={64}
+          inactiveZone={0.01}
+          borderWidth={3}
+        />
+        <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border-[0.75px] bg-background p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] md:p-6">
+          <div className="relative flex flex-1 flex-col justify-between gap-3">
+            <div className="w-fit rounded-lg border-[0.75px] border-border bg-muted p-2 dark:bg-slate-800 dark:border-slate-700">
+              {icon}
+            </div>
+            <div className="space-y-3">
+              <h3 className="pt-0.5 text-xl leading-[1.375rem] font-semibold font-sans tracking-[-0.04em] md:text-2xl md:leading-[1.875rem] text-balance text-foreground">
+                {title}
+              </h3>
+              <p className="font-sans text-sm leading-[1.125rem] md:text-base md:leading-[1.375rem] text-muted-foreground dark:text-slate-300">
+                {description}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+};
+
+
 export default function IndexPage() {
   return (
     <DefaultLayout>
       {/* Hero Section with Wavy Background */}
+      
       <WavyBackground className="max-w-4xl mx-auto pb-20 ">
         <Hero />
       </WavyBackground>
@@ -72,92 +124,81 @@ export default function IndexPage() {
           </p>
         </section>
 
-        {/* Features Grid */}
-        <section className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Feature
-              icon={Zap}
-              title="Lightning Fast"
-              description="Sub-second trade settlement powered by optimistic rollups and off-chain matching engines."
-            />
-            <Feature
-              icon={Shield}
-              title="Non-Custodial"
-              description="Your private keys, your funds. We never hold your assets — trade with full self-custody."
-            />
-            <Feature
-              icon={TrendingUp}
-              title="Up to 50x Leverage"
-              description="Maximize your position size across BTC, ETH, and top alts with dynamic risk-adjusted margin."
-            />
-            <Feature
-              icon={BarChart3}
-              title="Deep Liquidity"
-              description="Aggregated liquidity from AMMs, market makers, and on-chain order books ensures tight spreads."
-            />
-            <Feature
-              icon={Wallet}
-              title="Wallet-First UX"
-              description="Connect MetaMask, WalletConnect, or Ledger in one click. No signup required."
-            />
-            <Feature
-              icon={Target}
-              title="Fair Execution"
-              description="Anti-MEV design protects you from front-running and sandwich attacks."
-            />
-          </div>
-        </section>
+      
+      {/* === STATS SECTION === */}
+      <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <Stat value="50x" label="Max Leverage" />
+          <Stat value="$2.4B+" label="Total Volume" />
+          <Stat value="0.05%" label="Taker Fee" />
+          <Stat value="24/7" label="Global Markets" />
+        </div>
+      </div>
 
-        {/* Stats Bar */}
-        <section className="container mx-auto pt-12 border-t border-gray-800">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <Stat value="$412M" label="24H Trading Volume" />
-            <Stat value="68K+" label="Active Traders" />
-            <Stat value="36" label="Perpetual Markets" />
-            <Stat value="3" label="Supported Chains" />
-          </div>
-        </section>
+      {/* === FEATURES GRID === */}
+      <ul className="container mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6 md:grid-cols-12 md:grid-rows-3 lg:gap-8 xl:max-h-[36rem] xl:grid-rows-2">
+        <GridItem
+          area="md:[grid-area:1/1/2/7] xl:[grid-area:1/1/2/5]"
+          icon={<Zap className="h-4 w-4 text-primary" />}
+          title="Lightning-Fast Execution"
+          description="Sub-200ms order matching powered by Layer 3 rollups and JIT liquidity."
+        />
+        <GridItem
+          area="md:[grid-area:1/7/2/13] xl:[grid-area:2/1/3/5]"
+          icon={<Shield className="h-4 w-4 text-primary" />}
+          title="Decentralized Insurance Pool"
+          description="Backstop fund protects traders during black swan events and undercollateralization."
+        />
+        <GridItem
+          area="md:[grid-area:2/1/3/7] xl:[grid-area:1/5/3/8]"
+          icon={<LockKeyhole className="h-4 w-4 text-primary" />}
+          title="Non-Custodial & Audited"
+          description="Open-source contracts, audited by Spearbit and PeckShield. Your keys, your coins."
+        />
+        <GridItem
+          area="md:[grid-area:2/7/3/13] xl:[grid-area:1/8/2/13]"
+          icon={<LineChart className="h-4 w-4 text-primary" />}
+          title="Real-Time PnL Tracking"
+          description="In-wallet analytics show live profit/loss, funding costs, and liquidation price."
+        />
+        <GridItem
+          area="md:[grid-area:3/1/4/13] xl:[grid-area:2/8/3/13]"
+          icon={<Coins className="h-4 w-4 text-primary" />}
+          title="Cross-Margin Efficiency"
+          description="One wallet, multiple positions. Maximize capital efficiency with shared margin."
+        />
+      </ul>
 
-        
-       
-        {/* CTA Banner */}
-        <section className="container mx-auto text-center max-w-3xl">
-          <Card className="bg-gradient-to-r from-primary/10 to-purple-900/20 border border-primary/30 backdrop-blur-sm">
-            <CardBody className="p-10 flex flex-col items-center text-center">
-              <h3 className={title({ size: "sm" })}>Ready to Trade?</h3>
-              <p className={subtitle({ class: "mt-4 text-gray-300" })}>
-                Join thousands of traders on the fastest-growing decentralized
-                perpetual exchange.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Link
-                  href="/trading"
-                  className={buttonStyles({
-                    color: "primary",
-                    radius: "lg",
-                    size: "lg",
-                    fullWidth: true,
-                    class: "font-semibold",
-                  })}
-                >
-                  Launch App <Zap className="w-5 h-5 ml-2" />
-                </Link>
-                <Link
-                  href="/docs"
-                  className={buttonStyles({
-                    variant: "bordered",
-                    radius: "lg",
-                    size: "lg",
-                    fullWidth: true,
-                    class: "text-white border-gray-600 hover:border-primary",
-                  })}
-                >
-                  Read Docs
-                </Link>
-              </div>
-            </CardBody>
-          </Card>
-        </section>
+      {/* === CTA SECTION === */}
+      <div className="container mx-auto px-4 py-24 sm:px-6 lg:px-8 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl mx-auto"
+        >
+          <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6">
+            Ready to Trade the Future?
+          </h2>
+          <p className="text-lg text-slate-300 mb-8">
+            Join 85,000+ traders on the fastest-growing perpetual DEX.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-primary to-primary/80 text-white gap-2 px-8"
+            >
+              Start Trading <ArrowRight className="w-4 h-4" />
+            </Button>
+            <Button
+              size="lg"
+              className="text-white border-white/30 hover:bg-white/10"
+            >
+              View Docs
+            </Button>
+          </div>
+        </motion.div>
+      </div>
       </div>
     </DefaultLayout>
   );

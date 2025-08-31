@@ -14,7 +14,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useAccount } from "wagmi";
-import { readContract, writeContract } from "@wagmi/core";
+import { readContract, writeContract, waitForTransactionReceipt } from "@wagmi/core";
 import { parseUnits, formatUnits } from "viem";
 import { config } from "@/config/wagmiConfig";
 
@@ -92,15 +92,23 @@ export default function VaultPage() {
         return;
       }
 
-      await writeContract(config, {
+      const tx = await writeContract(config, {
         address: VUSDT_ADDRESS,
         abi: VUSDT_ABI,
         functionName: "limitedMint",
         args: [],
       });
 
-      toast.success("Airdrop successful!");
-      await loadVaultBalances();
+      toast.info("Transaction sent. Waiting for confirmation...");
+
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status === "success") {
+        toast.success("Airdrop successful!");
+        await loadVaultBalances();
+      } else {
+        toast.error("Airdrop failed.");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Airdrop failed.");
@@ -121,24 +129,36 @@ export default function VaultPage() {
       }) as bigint;
 
       if (allowance < amt) {
-        await writeContract(config, {
+        const approveTx = await writeContract(config, {
           address: VUSDT_ADDRESS,
           abi: VUSDT_ABI,
           functionName: "approve",
           args: [VAULT_ADDRESS, amt],
         });
+
+        toast.info("Approving spend...");
+
+        await waitForTransactionReceipt(config, { hash: approveTx });
       }
 
-      await writeContract(config, {
+      const tx = await writeContract(config, {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
         functionName: "deposit",
         args: [amt],
       });
 
-      toast.success("Deposit successful!");
-      setDepositAmount("");
-      await loadVaultBalances();
+      toast.info("Depositing... please wait");
+
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status === "success") {
+        toast.success("Deposit successful!");
+        setDepositAmount("");
+        await loadVaultBalances();
+      } else {
+        toast.error("Deposit failed.");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Deposit failed.");
@@ -153,16 +173,24 @@ export default function VaultPage() {
       setLoadingWithdraw(true);
       const amt = parseUnits(withdrawAmount, 18);
 
-      await writeContract(config, {
+      const tx = await writeContract(config, {
         address: VAULT_ADDRESS,
         abi: VAULT_ABI,
         functionName: "withdrawal",
         args: [amt],
       });
 
-      toast.success("Withdrawal successful!");
-      setWithdrawAmount("");
-      await loadVaultBalances();
+      toast.info("Withdrawing... please wait");
+
+      const receipt = await waitForTransactionReceipt(config, { hash: tx });
+
+      if (receipt.status === "success") {
+        toast.success("Withdrawal successful!");
+        setWithdrawAmount("");
+        await loadVaultBalances();
+      } else {
+        toast.error("Withdrawal failed.");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Withdrawal failed.");

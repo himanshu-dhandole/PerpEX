@@ -505,7 +505,7 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                       >
                         <p
                           className={`text-sm ${
-                            (currentPrice / 1e18 - positionData.entryPrice) *
+                            ((currentPrice / 1e18 - positionData.entryPrice)) *
                               (positionData.isLong ? 1 : -1) >=
                             0
                               ? "text-success"
@@ -524,13 +524,13 @@ const POSITION_NFT_ADDRESS = import.meta.env.VITE_POSITION_NFT_ADDRESS as `0x${s
                               : "text-danger"
                           }`}
                         >
-                          {(currentPrice / 1e18 - positionData.entryPrice) *
+                          {((currentPrice / 1e18 - positionData.entryPrice) * positionData.leverage) *
                             (positionData.isLong ? 1 : -1) >=
                           0
                             ? "+"
                             : ""}
                           {(
-                            (currentPrice / 1e18 - positionData.entryPrice) *
+                            ((currentPrice / 1e18 - positionData.entryPrice) * positionData.leverage) *
                             (positionData.isLong ? 1 : -1)
                           ).toFixed(2)}
                           $
