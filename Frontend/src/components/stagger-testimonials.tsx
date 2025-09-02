@@ -1,145 +1,164 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const SQRT_5000 = Math.sqrt(5000);
 
 const testimonials = [
   {
     tempId: 0,
-    testimonial: "Perpex has completely changed the way I trade. Execution is lightning fast and slippage is almost zero.",
+    testimonial:
+      "Perpex has completely changed the way I trade. Execution is lightning fast and slippage is almost zero.",
     by: "Alex, Crypto Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=1"
+    imgSrc: "https://i.pravatar.cc/150?img=1",
   },
   {
     tempId: 1,
-    testimonial: "I've tried many DEXs, but Perpex's perpetual contracts are the most reliable. I trust it with my funds.",
+    testimonial:
+      "I've tried many DEXs, but Perpex's perpetual contracts are the most reliable. I trust it with my funds.",
     by: "Dan, Algo Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=2"
+    imgSrc: "https://i.pravatar.cc/150?img=2",
   },
   {
     tempId: 2,
-    testimonial: "The leverage options on Perpex are incredible. I can scale my positions safely and efficiently.",
+    testimonial:
+      "The leverage options on Perpex are incredible. I can scale my positions safely and efficiently.",
     by: "Stephanie, Swing Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=3"
+    imgSrc: "https://i.pravatar.cc/150?img=3",
   },
   {
     tempId: 3,
-    testimonial: "Perpex’s interface is smooth, and I never have to worry about downtime during high volatility.",
+    testimonial:
+      "Perpex’s interface is smooth, and I never have to worry about downtime during high volatility.",
     by: "Marie, Day Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=4"
+    imgSrc: "https://i.pravatar.cc/150?img=4",
   },
   {
     tempId: 4,
-    testimonial: "I love the liquidity on Perpex. Big orders get filled without moving the market too much.",
+    testimonial:
+      "I love the liquidity on Perpex. Big orders get filled without moving the market too much.",
     by: "Andre, Derivatives Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=5"
+    imgSrc: "https://i.pravatar.cc/150?img=5",
   },
   {
     tempId: 5,
-    testimonial: "Perpex saved me from a potential loss with their fast settlement. Truly a game-changer for traders.",
+    testimonial:
+      "Perpex saved me from a potential loss with their fast settlement. Truly a game-changer for traders.",
     by: "Jeremy, Crypto Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=6"
+    imgSrc: "https://i.pravatar.cc/150?img=6",
   },
   {
     tempId: 6,
-    testimonial: "I was hesitant about leveraged trading, but Perpex makes it safe and intuitive. I’m never going back.",
+    testimonial:
+      "I was hesitant about leveraged trading, but Perpex makes it safe and intuitive. I’m never going back.",
     by: "Pam, Margin Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=7"
+    imgSrc: "https://i.pravatar.cc/150?img=7",
   },
   {
     tempId: 7,
-    testimonial: "The analytics and charts on Perpex are top-notch. I can plan my trades with confidence.",
+    testimonial:
+      "The analytics and charts on Perpex are top-notch. I can plan my trades with confidence.",
     by: "Daniel, Quant Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=8"
+    imgSrc: "https://i.pravatar.cc/150?img=8",
   },
   {
     tempId: 8,
-    testimonial: "Perpex’s perpetual contracts are smooth. No weird funding issues or glitches like on other DEXs.",
+    testimonial:
+      "Perpex’s perpetual contracts are smooth. No weird funding issues or glitches like on other DEXs.",
     by: "Fernando, Scalper",
-    imgSrc: "https://i.pravatar.cc/150?img=9"
+    imgSrc: "https://i.pravatar.cc/150?img=9",
   },
   {
     tempId: 9,
-    testimonial: "I’ve been trading for years, and Perpex offers the fastest execution I’ve seen on a DEX.",
+    testimonial:
+      "I’ve been trading for years, and Perpex offers the fastest execution I’ve seen on a DEX.",
     by: "Andy, Crypto Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=10"
+    imgSrc: "https://i.pravatar.cc/150?img=10",
   },
   {
     tempId: 10,
-    testimonial: "The funding rates on Perpex are fair and transparent. I can hold long-term positions without surprises.",
+    testimonial:
+      "The funding rates on Perpex are fair and transparent. I can hold long-term positions without surprises.",
     by: "Pete, Swing Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=11"
+    imgSrc: "https://i.pravatar.cc/150?img=11",
   },
   {
     tempId: 11,
-    testimonial: "I got my whole team trading on Perpex in minutes. The UI is simple and efficient.",
+    testimonial:
+      "I got my whole team trading on Perpex in minutes. The UI is simple and efficient.",
     by: "Marina, Crypto Fund Manager",
-    imgSrc: "https://i.pravatar.cc/150?img=12"
+    imgSrc: "https://i.pravatar.cc/150?img=12",
   },
   {
     tempId: 12,
-    testimonial: "Customer support on Perpex is incredible. They solved my withdrawal issue in no time.",
+    testimonial:
+      "Customer support on Perpex is incredible. They solved my withdrawal issue in no time.",
     by: "Olivia, Active Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=13"
+    imgSrc: "https://i.pravatar.cc/150?img=13",
   },
   {
     tempId: 13,
-    testimonial: "I doubled my returns this month thanks to Perpex’s tight spreads and deep liquidity.",
+    testimonial:
+      "I doubled my returns this month thanks to Perpex’s tight spreads and deep liquidity.",
     by: "Raj, Leveraged Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=14"
+    imgSrc: "https://i.pravatar.cc/150?img=14",
   },
   {
     tempId: 14,
-    testimonial: "Perpex makes hedging my portfolio effortless. No other DEX comes close in terms of efficiency.",
+    testimonial:
+      "Perpex makes hedging my portfolio effortless. No other DEX comes close in terms of efficiency.",
     by: "Lila, Portfolio Manager",
-    imgSrc: "https://i.pravatar.cc/150?img=15"
+    imgSrc: "https://i.pravatar.cc/150?img=15",
   },
   {
     tempId: 15,
-    testimonial: "The scalability of Perpex is unmatched. I can trade huge positions without worrying about slippage.",
+    testimonial:
+      "The scalability of Perpex is unmatched. I can trade huge positions without worrying about slippage.",
     by: "Trevor, Institutional Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=16"
+    imgSrc: "https://i.pravatar.cc/150?img=16",
   },
   {
     tempId: 16,
-    testimonial: "Perpex continually innovates with new features and tools. It keeps me ahead of the market.",
+    testimonial:
+      "Perpex continually innovates with new features and tools. It keeps me ahead of the market.",
     by: "Naomi, Technical Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=17"
+    imgSrc: "https://i.pravatar.cc/150?img=17",
   },
   {
     tempId: 17,
-    testimonial: "I’ve recovered more trades on Perpex than anywhere else. Their platform is extremely reliable.",
+    testimonial:
+      "I’ve recovered more trades on Perpex than anywhere else. Their platform is extremely reliable.",
     by: "Victor, Crypto Analyst",
-    imgSrc: "https://i.pravatar.cc/150?img=18"
+    imgSrc: "https://i.pravatar.cc/150?img=18",
   },
   {
     tempId: 18,
-    testimonial: "Perpex balances robustness and usability perfectly. I can trade complex strategies without hassle.",
+    testimonial:
+      "Perpex balances robustness and usability perfectly. I can trade complex strategies without hassle.",
     by: "Yuki, Algorithmic Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=19"
+    imgSrc: "https://i.pravatar.cc/150?img=19",
   },
   {
     tempId: 19,
-    testimonial: "After trying multiple DEXs, Perpex is the only one I trust for high-volume perpetual trades.",
+    testimonial:
+      "After trying multiple DEXs, Perpex is the only one I trust for high-volume perpetual trades.",
     by: "Zoe, Professional Trader",
-    imgSrc: "https://i.pravatar.cc/150?img=20"
-  }
+    imgSrc: "https://i.pravatar.cc/150?img=20",
+  },
 ];
-
 
 interface TestimonialCardProps {
   position: number;
-  testimonial: typeof testimonials[0];
+  testimonial: (typeof testimonials)[0];
   handleMove: (steps: number) => void;
   cardSize: number;
 }
 
-const TestimonialCard: React.FC<TestimonialCardProps> = ({ 
-  position, 
-  testimonial, 
-  handleMove, 
-  cardSize 
+const TestimonialCard: React.FC<TestimonialCardProps> = ({
+  position,
+  testimonial,
+  handleMove,
+  cardSize,
 }) => {
   const isCenter = position === 0;
 
@@ -148,8 +167,8 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
       onClick={() => handleMove(position)}
       className={cn(
         "absolute left-1/2 top-1/2 cursor-pointer border-2 p-8 transition-all duration-500 ease-in-out",
-        isCenter 
-          ? "z-10 bg-primary text-primary-foreground border-primary" 
+        isCenter
+          ? "z-10 bg-primary text-primary-foreground border-primary"
           : "z-0 bg-card text-card-foreground border-border hover:border-primary/50"
       )}
       style={{
@@ -162,7 +181,9 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           translateY(${isCenter ? -65 : position % 2 ? 15 : -15}px)
           rotate(${isCenter ? 0 : position % 2 ? 2.5 : -2.5}deg)
         `,
-        boxShadow: isCenter ? "0px 8px 0px 4px hsl(var(--border))" : "0px 0px 0px 0px transparent"
+        boxShadow: isCenter
+          ? "0px 8px 0px 4px hsl(var(--border))"
+          : "0px 0px 0px 0px transparent",
       }}
     >
       <span
@@ -171,27 +192,31 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           right: -2,
           top: 48,
           width: SQRT_5000,
-          height: 2
+          height: 2,
         }}
       />
       <img
         src={testimonial.imgSrc}
-        alt={`${testimonial.by.split(',')[0]}`}
+        alt={`${testimonial.by.split(",")[0]}`}
         className="mb-4 h-14 w-12 bg-muted object-cover object-top"
         style={{
-          boxShadow: "3px 3px 0px hsl(var(--background))"
+          boxShadow: "3px 3px 0px hsl(var(--background))",
         }}
       />
-      <h3 className={cn(
-        "text-base sm:text-xl font-medium",
-        isCenter ? "text-primary-foreground" : "text-foreground"
-      )}>
+      <h3
+        className={cn(
+          "text-base sm:text-xl font-medium",
+          isCenter ? "text-primary-foreground" : "text-foreground"
+        )}
+      >
         "{testimonial.testimonial}"
       </h3>
-      <p className={cn(
-        "absolute bottom-8 left-8 right-8 mt-2 text-sm italic",
-        isCenter ? "text-primary-foreground/80" : "text-muted-foreground"
-      )}>
+      <p
+        className={cn(
+          "absolute bottom-8 left-8 right-8 mt-2 text-sm italic",
+          isCenter ? "text-primary-foreground/80" : "text-muted-foreground"
+        )}
+      >
         - {testimonial.by}
       </p>
     </div>
@@ -231,15 +256,25 @@ export const StaggerTestimonials: React.FC = () => {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
+  // Auto-rotate testimonials
+  useEffect(() => {
+    const interval = setInterval(() => {
+      handleMove(1);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [testimonialsList]);
+
+  
   return (
     <div
       className="relative w-full overflow-hidden bg-dark"
       style={{ height: 600 }}
     >
       {testimonialsList.map((testimonial, index) => {
-        const position = testimonialsList.length % 2
-          ? index - (testimonialsList.length + 1) / 2
-          : index - testimonialsList.length / 2;
+        const position =
+          testimonialsList.length % 2
+            ? index - (testimonialsList.length + 1) / 2
+            : index - testimonialsList.length / 2;
         return (
           <TestimonialCard
             key={testimonial.tempId}

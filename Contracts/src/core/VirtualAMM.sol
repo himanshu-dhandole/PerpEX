@@ -75,7 +75,7 @@ contract VirtualAMM is Ownable {
 
     // Funding rate in basis points based on vAMM price vs spot price
     function calculateFundingRate() external view _onlyPositionManager returns (int256 fundingRateBps) {
-        uint256 spotPrice = uint256(iPriceOracle.getLatestPrice());
+        uint256 spotPrice = uint256(iPriceOracle.getLatestPrice()) * 1e10;
 
         (uint256 vAMMPrice, bool isValid) = getCurrentPrice();
         if (!isValid || spotPrice == 0) return 0;

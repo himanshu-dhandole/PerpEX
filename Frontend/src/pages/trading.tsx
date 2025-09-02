@@ -76,6 +76,7 @@ export default function TradingPage(): JSX.Element {
   const { address } = useAccount();
 
   const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [fundingRate, setFundingRate] = useState<number>(0);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [priceChangePercent, setPriceChangePercent] = useState<number>(0);
   const [tokenID, setTokenID] = useState<number | null>(null);
@@ -179,6 +180,7 @@ export default function TradingPage(): JSX.Element {
           loadVaultBalances(),
           loadPositionData(),
           getPositionStats(),
+          getCurrentFundingRate(),
         ]);
       } else {
         toast.error("Transaction failed.");
@@ -213,6 +215,7 @@ export default function TradingPage(): JSX.Element {
             loadVaultBalances(),
             loadPositionData(),
             getPositionStats(),
+            getCurrentFundingRate(),
           ]);
         }, 1500);
         toast.success("Position closed!");
@@ -300,21 +303,61 @@ export default function TradingPage(): JSX.Element {
         totalShort: Number(formatUnits(statsRes[1], 18)),
         totalLongCollateral: Number(formatUnits(statsRes[2], 18)),
         totalShortCollateral: Number(formatUnits(statsRes[3], 18)),
-        fundingRateAccumulated: Number(formatUnits(statsRes[4], 18)),
+        fundingRateAccumulated: Number(formatUnits(statsRes[4], 4)),
       });
     } catch (error) {
       console.error("Failed to get position stats:", error);
     }
   };
 
+  const getCurrentFundingRate = async () => {
+    try {
+      const fundingRate = await readContract(getPublicClient(config), {
+        address: POSITION_MANAGER_ADDRESS,
+        abi: POSITION_MANAGER_ABI,
+        functionName: "getCurrentFundingRate",
+        args: [],
+      });
+      setFundingRate(Number(fundingRate as bigint) / 10000);
+    } catch (error) {
+      console.error("Failed to fetch current funding rate:", error);
+    }
+  };
+
+const getPnl = () => {
+  if (!positionData.isOpen) return 0;
+  const currentPriceNow = currentPrice / 1e18;
+  const entryPrice = positionData.entryPrice;
+  const collateral = positionData.collateral;
+  const leverage = positionData.leverage;
+
+  if (!entryPrice || entryPrice === 0) return 0;
+
+  const notional = collateral * leverage;
+  const direction = positionData.isLong ? 1 : -1;
+
+  const priceChange = (currentPriceNow - entryPrice) / entryPrice; 
+  const grossPnl = direction * notional * priceChange;
+
+  // fee only on collateral (0.05%)
+  const fee = collateral * 0.0005;
+
+  const pnl = grossPnl - fee;
+  return Number(pnl);
+};
+
+
+
   useEffect(() => {
     loadVaultBalances();
     loadPositionData();
     getPositionStats();
+    getCurrentFundingRate();
   }, [address]);
 
   useEffect(() => {
     loadCurrentPrice();
+    getPnl();
     const interval = setInterval(loadCurrentPrice, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -381,7 +424,8 @@ export default function TradingPage(): JSX.Element {
                   <div>
                     <p className="text-emerald-100 text-sm">Funding Rate</p>
                     <p className="text-2xl font-bold">
-                      +{stats.fundingRateAccumulated}%
+                      {fundingRate >= 0 ? "+" : "-"}
+                      {fundingRate.toFixed(4)}%
                     </p>
                   </div>
                   <BarChart3 className="w-8 h-8 text-emerald-200" />
@@ -396,7 +440,10 @@ export default function TradingPage(): JSX.Element {
                     <p className="text-amber-100 text-sm">
                       Accumilated Funding Rate
                     </p>
-                    <p className="text-2xl font-bold">0.01%</p>
+                    <p className="text-2xl font-bold">
+                      {stats.fundingRateAccumulated >= 0 ? "+" : "-"}
+                      {stats.fundingRateAccumulated.toFixed(4)}%
+                    </p>
                   </div>
                   <Target className="w-8 h-8 text-amber-200" />
                 </div>
@@ -514,7 +561,7 @@ export default function TradingPage(): JSX.Element {
                           {positionData.leverage}×
                         </p>
                       </div>
-                      <div
+                      {/* <div
                         className={`text-center p-3 rounded-lg ${
                           (currentPrice / 1e18 - positionData.entryPrice) *
                             (positionData.isLong ? 1 : -1) >=
@@ -554,6 +601,24 @@ export default function TradingPage(): JSX.Element {
                             (positionData.isLong ? 1 : -1)
                           ).toFixed(2)}
                           $
+                        </p>
+                      </div> */}
+                      <div
+                        className={`text-center p-3 rounded-lg ${
+                          getPnl() >= 0 ? "bg-success/10" : "bg-danger/10"
+                        }`}
+                      >
+                        <p
+                          className={`text-sm ${getPnl() >= 0 ? "text-success" : "text-danger"}`}
+                        >
+                          PnL
+                        </p>
+
+                        <p
+                          className={`font-bold ${getPnl() >= 0 ? "text-success" : "text-danger"}`}
+                        >
+                          {getPnl() >= 0 ? "+" : ""}
+                          {getPnl().toFixed(2)}$
                         </p>
                       </div>
                     </div>
@@ -697,6 +762,7 @@ export default function TradingPage(): JSX.Element {
           theme="dark"
         />
       </div>
+      <Button onPress={getPnl}>getPnl</Button>
     </DefaultLayout>
   );
 }
