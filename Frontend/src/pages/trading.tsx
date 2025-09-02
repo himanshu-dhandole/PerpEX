@@ -424,7 +424,7 @@ const getPnl = () => {
                   <div>
                     <p className="text-emerald-100 text-sm">Funding Rate</p>
                     <p className="text-2xl font-bold">
-                      {fundingRate >= 0 ? "+" : "-"}
+                      {fundingRate >= 0 ? "+" : ""}
                       {fundingRate.toFixed(4)}%
                     </p>
                   </div>
@@ -441,7 +441,7 @@ const getPnl = () => {
                       Accumilated Funding Rate
                     </p>
                     <p className="text-2xl font-bold">
-                      {stats.fundingRateAccumulated >= 0 ? "+" : "-"}
+                      {stats.fundingRateAccumulated >= 0 ? "+" : ""}
                       {stats.fundingRateAccumulated.toFixed(4)}%
                     </p>
                   </div>
@@ -762,7 +762,6 @@ const getPnl = () => {
           theme="dark"
         />
       </div>
-      <Button onPress={getPnl}>getPnl</Button>
     </DefaultLayout>
   );
 }
