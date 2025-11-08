@@ -1,28 +1,39 @@
 {
-  "name": "keeper",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "perpex-liquidation-keeper",
+  "version": "2.0.0",
+  "description": "MongoDB-powered liquidation keeper for Perpex perpetual futures protocol",
+  "main": "dist/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/bot.js",
-    "dev": "nodemon --exec ts-node src/bot.ts",
     "build": "tsc",
-    "watch": "tsc -w"
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "indexer": "ts-node src/indexer.ts",
+    "keeper": "ts-node src/keeper-with-db.ts",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build"
   },
-  "keywords": ["perpex", "liquidation", "keeper", "bot"],
+  "keywords": [
+    "perpex",
+    "liquidation",
+    "keeper",
+    "bot",
+    "defi",
+    "mongodb",
+    "blockchain"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
   "dependencies": {
-    "dotenv": "^17.2.3",
-    "viem": "^2.38.6",
-    "wagmi": "^2.19.2",
-    "winston": "^3.18.3"
+    "viem": "^2.0.0",
+    "mongodb": "^6.3.0",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "@types/node": "^24.10.0",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
