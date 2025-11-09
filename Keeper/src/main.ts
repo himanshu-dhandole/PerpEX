@@ -1,5 +1,6 @@
 import BlockchainIndexer from './indexer';
 import EnhancedLiquidationBot from './keeper-with-db';
+import FundingRateUpdater from './funding-rate-updater';
 import dbClient from './db-client';
 import logger from './logger';
 
@@ -12,14 +13,16 @@ async function main() {
   // Initialize components
   const indexer = new BlockchainIndexer();
   const keeper = new EnhancedLiquidationBot();
+  const fundingUpdater = new FundingRateUpdater();
 
   // Graceful shutdown handler
   const shutdown = async (signal: string) => {
     logger.info(`\n📛 Received ${signal} - shutting down gracefully...`);
     
-    // Stop both components
+    // Stop all components
     indexer.stop();
     keeper.stop();
+    fundingUpdater.stop();
     
     // Wait a bit for cleanup
     setTimeout(async () => {
@@ -60,6 +63,11 @@ async function main() {
     // Wait for initial sync to complete
     logger.info('⏳ Waiting 5 seconds for initial sync...\n');
     await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // Start funding rate updater
+    logger.info('⏰ Starting funding rate updater...');
+    await fundingUpdater.start();
+    logger.info('✅ Funding rate updater running (checks every 5 min)\n');
 
     // Start keeper
     logger.info('🤖 Starting liquidation keeper...\n');

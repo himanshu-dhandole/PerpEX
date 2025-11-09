@@ -69,28 +69,17 @@ class BlockchainIndexer {
   private async syncHistoricalData(): Promise<void> {
     try {
       const currentBlock = await this.publicClient.getBlockNumber();
-      const syncStatus = await dbClient.getSyncStatus(config.positionNFTAddress);
       
-      if (syncStatus) {
-        const startBlock = BigInt(syncStatus.lastSyncedBlock) + 1n;
-        logger.info(`📚 Resuming sync from block ${startBlock}`);
-        
-        if (startBlock <= currentBlock) {
-          await this.syncBlockRange(startBlock, currentBlock);
-          logger.info('✅ Historical sync completed');
-        } else {
-          logger.info('✅ Already synced up to current block');
-        }
-      } else {
-        // First time sync - START FROM CURRENT BLOCK ONLY
-        logger.info(`🆕 First sync - starting from CURRENT block ${currentBlock}`);
-        logger.info(`⚠️  Note: Historical positions will NOT be indexed`);
-        
-        await dbClient.updateSyncStatus(config.positionNFTAddress, currentBlock.toString());
-        logger.info('✅ Sync point set to current block');
-      }
+      // ALWAYS START FRESH FROM CURRENT BLOCK - NO HISTORICAL SYNC
+      logger.info(`🆕 Starting fresh from CURRENT block ${currentBlock}`);
+      logger.info(`⚠️  Note: Only NEW positions from this point will be indexed`);
+      
+      // Set sync status to current block (overwrite any existing status)
+      await dbClient.updateSyncStatus(config.positionNFTAddress, currentBlock.toString());
+      logger.info('✅ Sync point set to current block');
+      
     } catch (error) {
-      logger.error('Failed to sync historical data', { error });
+      logger.error('Failed to initialize sync', { error });
       throw error;
     }
   }
