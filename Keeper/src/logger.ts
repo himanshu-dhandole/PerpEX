@@ -1,36 +1,56 @@
-import winston from 'winston';
+type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss'
-    }),
-    winston.format.errors({ stack: true }),
-    winston.format.splat(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'perpex-liquidation-bot' },
-  transports: [
-    // Console output
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(
-          ({ level, message, timestamp, ...metadata }) => {
-            let msg = `${timestamp} [${level}]: ${message}`;
-            if (Object.keys(metadata).length > 0) {
-              msg += ` ${JSON.stringify(metadata)}`;
-            }
-            return msg;
-          }
-        )
-      )
-    }),
-    // File outputs
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' })
-  ]
-});
+interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
 
-export default logger;
+class Logger {
+  private formatTimestamp(): string {
+    return new Date().toISOString();
+  }
+
+  private formatMessage(level: LogLevel, message: string, data?: any): string {
+    const timestamp = this.formatTimestamp();
+    const dataStr = data ? `\n${JSON.stringify(data, null, 2)}` : '';
+    return `[${timestamp}] [${level.toUpperCase()}] ${message}${dataStr}`;
+  }
+
+  private getColor(level: LogLevel): string {
+    const colors = {
+      info: '\x1b[36m',    // Cyan
+      warn: '\x1b[33m',    // Yellow
+      error: '\x1b[31m',   // Red
+      debug: '\x1b[35m'    // Magenta
+    };
+    return colors[level] || '\x1b[0m';
+  }
+
+  private log(level: LogLevel, message: string, data?: any): void {
+    const color = this.getColor(level);
+    const reset = '\x1b[0m';
+    const formattedMessage = this.formatMessage(level, message, data);
+    
+    console.log(`${color}${formattedMessage}${reset}`);
+  }
+
+  info(message: string, data?: any): void {
+    this.log('info', message, data);
+  }
+
+  warn(message: string, data?: any): void {
+    this.log('warn', message, data);
+  }
+
+  error(message: string, data?: any): void {
+    this.log('error', message, data);
+  }
+
+  debug(message: string, data?: any): void {
+    this.log('debug', message, data);
+  }
+}
+
+export default new Logger();

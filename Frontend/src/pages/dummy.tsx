@@ -117,11 +117,11 @@ export default function DocsPage() {
     try {
       const publicClient = getPublicClient(config);
 
-      const [price , isValid] = await readContract(publicClient, {
+      const [price, isValid] = (await readContract(publicClient, {
         address: VAMM_ADDRESS,
         abi: VAMM_ABI,
         functionName: "getCurrentPrice",
-      })as [bigint, boolean];
+      })) as [bigint, boolean];
 
       console.log("Current price:", price);
     } catch (error) {
@@ -140,7 +140,7 @@ export default function DocsPage() {
         functionName: "getLatestPrice",
         args: [],
       });
-        console.log("Raw price:", rawPrice);
+      console.log("Raw price:", rawPrice);
 
       const decimals = await readContract(publicClient, {
         address: PRICE_ORACLE_ADDRESS,
@@ -261,7 +261,7 @@ export default function DocsPage() {
     } catch (error) {
       console.error("Failed to update funding rate:", error);
     }
-  }
+  };
 
   const getStats = async () => {
     try {
@@ -274,6 +274,21 @@ export default function DocsPage() {
       console.log("Position stats:", stats);
     } catch (error) {
       console.error("Failed to fetch position stats:", error);
+    }
+  };
+
+  const isPositionLiquidatable = async () => {
+    try {
+      const liquidatable = await readContract(getPublicClient(config), {
+        address: POSITION_MANAGER_ADDRESS,
+        abi: POSITION_MANAGER_ABI,
+        functionName: "isPositionLiquidatable",
+        args: [20],
+        account: address,
+      });
+      console.log("Position liquidatable:", liquidatable);
+    } catch (error) {
+      console.error("Failed to check if position is liquidatable:", error);
     }
   };
 
@@ -310,7 +325,6 @@ export default function DocsPage() {
           </h2>
 
           <div className="mt-4 text-left text-sm">
-
             <p>
               <strong>Locked:</strong> {vaultData.locked} vUSDT
             </p>
@@ -354,55 +368,19 @@ export default function DocsPage() {
       >
         Set Initial Price
       </button>
-    <br />
-      <Button onPress={priceAmm}>
-        priceAMM
-      </Button>
-      <br /><br />
-      <Button onPress={getFundingRate} >
-        getCurrentFunding rate
-      </Button>
       <br />
-      <Button onPress={updateFundingRate} >
-        update afunding rate
-      </Button>
+      <Button onPress={priceAmm}>priceAMM</Button>
       <br />
-      <Button onPress={getStats} >
-        getPositionStats
-      </Button>
-
+      <br />
+      <Button onPress={getFundingRate}>getCurrentFunding rate</Button>
+      <br />
+      <Button onPress={updateFundingRate}>update afunding rate</Button>
+      <br />
+      <Button onPress={getStats}>getPositionStats</Button>
+      <Button onPress={isPositionLiquidatable}>isPositionLiquidatable</Button>
     </DefaultLayout>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import { cn } from "@/lib/utils";
 // import DefaultLayout from "@/layouts/default";
@@ -600,7 +578,6 @@ export default function DocsPage() {
 //     description="One wallet, multiple positions. Maximize capital efficiency with shared margin."
 //   />
 // </ul>
-
 
 //       {/* === CTA SECTION === */}
 //       <div className="container mx-auto px-4 py-24 sm:px-6 lg:px-8 text-center">
