@@ -10,7 +10,7 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [sepolia.id]: http(`https://rpc.ankr.com/eth_sepolia/ed10915ec9df7a190d9e9cb37bd0275b78051776cfcd00ee0c13aed5284f3013`),
+    [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/WVJGGZmMVsc9__sm0uopV`),
   },
   ssr: true,
 });
