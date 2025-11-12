@@ -182,5 +182,3 @@ Perp‑EX brings together:
 The system is designed for **autonomous perpetual markets** with minimal trust, complete traceability, and powerful analytics potential.
 
 ---
-
-Need a **Docker Compose** setup or a **PM2 ecosystem config** next?
